@@ -13,10 +13,11 @@ model = YOLO("yolov8n.pt")
 # Input source
 # 0 = webcam
 # "input.mp4" = video file
-camera = cv2.VideoCapture("input_videos/test.mp4")  # Change to 0 for webcam or provide video file path
+INPUT_SOURCE = "input_videos/test.mp4"
+camera = cv2.VideoCapture(INPUT_SOURCE)  # Change to 0 for webcam or provide video file path
 #check camera
 if not camera.isOpened():
-    print("ERROR: Could not open camera.")
+    print(f"ERROR: Could not open input source: {INPUT_SOURCE}")
     exit()
 
 #get camera resolution
