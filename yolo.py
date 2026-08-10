@@ -11,6 +11,10 @@ model = YOLO("yolov8n.pt")
 
 # Open webcam
 camera = cv2.VideoCapture(0)
+#check camera
+if not camera.isOpened():
+    print("ERROR: Could not open camera.")
+    exit()
 
 #get camera resolution
 frame_width = int(camera.get(cv2.CAP_PROP_FRAME_WIDTH))
@@ -54,7 +58,8 @@ while True:
     # Read frame
     success, frame = camera.read()
 
-    if not success:
+    if not success or frame is None:
+        print("ERROR: Could not read frame from camera.")
         break
 
     # FPS Calculation
