@@ -16,11 +16,18 @@ camera = cv2.VideoCapture(0)
 frame_width = int(camera.get(cv2.CAP_PROP_FRAME_WIDTH))
 frame_height = int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
+# video output folder
+os.makedirs("output", exist_ok=True)
+# create tiemstamped output video
+video_filename = datetime.now().strftime("output_%Y%m%d_%H%M%S.mp4")
+video_path = os.path.join("videos", video_filename)
+
 #video codec
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
-#create  output vide
-video = cv2.VideoWriter("output.mp4",fourcc, 20, (frame_width, frame_height))
+#create  output video
+video = cv2.VideoWriter(video_path, fourcc, 20, (frame_width, frame_height))
+print(f"Recording video: {video_path}")
 
 # Previous time for FPS calculation
 previous_time = time.time()
