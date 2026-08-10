@@ -24,10 +24,19 @@ video = cv2.VideoWriter("output.mp4",fourcc, 20, (frame_width, frame_height))
 
 # Previous time for FPS calculation
 previous_time = time.time()
+# previous logged object for detection log
+previous_logged_object = None
+
+
+# detection log 
+os.makedirs("logs", exist_ok=True)
+log_file_path = os.path.join("logs", "detection_log.csv")
 
 #csv file 
-log_file = open("detection_log.csv", "a", newline="")
+log_file = open(log_file_path, "a", newline="")
 csv_writer = csv.writer(log_file)
+if log_file.tell() == 0:
+    csv_writer.writerow(["Date", "Time", "Object", "Confidence"])
 
 if log_file.tell() == 0:
     csv_writer.writerow(["Date", "Time", "Object", "Confidence"])
@@ -113,7 +122,10 @@ while True:
                 label = f"{model.names[cls]} {confidence:.2f}"
 
                 # Log detection to CSV
-                csv_writer.writerow([current_date, current_time, model.names[cls], f"{confidence:.2f}"])
+                if model.names[cls] != previous_logged_object:
+                    csv_writer.writerow([current_date, current_time, model.names[cls], confidence])
+                    log_file.flush()
+                    previous_logged_object = model.names[cls]
 
                 # Draw rectangle
                 if cls == 0:
