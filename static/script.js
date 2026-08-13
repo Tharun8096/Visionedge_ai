@@ -1,60 +1,264 @@
 const videoInput = document.getElementById("videoInput");
 const startBtn = document.getElementById("startBtn");
 
-const videoPlaceholder = document.getElementById("videoPlaceholder");
-const outputVideo = document.getElementById("outputVideo");
+const detectionStatus =
+    document.getElementById("detectionStatus");
 
-const detectionStatus = document.getElementById("detectionStatus");
-const lastDetection = document.getElementById("lastDetection");
+const lastDetection =
+    document.getElementById("lastDetection");
 
+const outputVideo =
+    document.getElementById("outputVideo");
 
-videoInput.addEventListener("change", function () {
-
-    if (videoInput.files.length > 0) {
-
-        const file = videoInput.files[0];
-
-        lastDetection.textContent =
-            "Selected: " + file.name;
-
-        detectionStatus.textContent = "VIDEO SELECTED";
-
-    } else {
-
-        detectionStatus.textContent = "READY";
-        lastDetection.textContent = "No detection yet";
-    }
-});
+const videoPlaceholder =
+    document.getElementById("videoPlaceholder");
 
 
-startBtn.addEventListener("click", function () {
+// =========================================================
+// UPDATE STATISTICS
+// =========================================================
 
-    if (videoInput.files.length === 0) {
+function updateStatistics(stats) {
+
+    console.log("Received statistics:", stats);
+
+    document.getElementById("persons").textContent =
+        stats.persons ?? 0;
+
+    document.getElementById("phones").textContent =
+        stats.phones ?? 0;
+
+    document.getElementById("cars").textContent =
+        stats.cars ?? 0;
+
+    document.getElementById("buses").textContent =
+        stats.buses ?? 0;
+
+    document.getElementById("trucks").textContent =
+        stats.trucks ?? 0;
+
+    document.getElementById("motorcycles").textContent =
+        stats.motorcycles ?? 0;
+
+    document.getElementById("totalObjects").textContent =
+        stats.total_objects ?? 0;
+
+    document.getElementById("fps").textContent =
+        stats.fps ?? 0;
+}
+
+
+// =========================================================
+// START DETECTION
+// =========================================================
+
+startBtn.addEventListener("click", async function () {
+
+    if (
+        !videoInput.files ||
+        videoInput.files.length === 0
+    ) {
 
         alert("Please select a video first.");
+
         return;
     }
 
-    detectionStatus.textContent = "STARTING...";
-    lastDetection.textContent = "Detection is being prepared...";
+
+    const videoFile =
+        videoInput.files[0];
+
+
+    const formData =
+        new FormData();
+
+
+    formData.append(
+        "video",
+        videoFile
+    );
+
+
+    detectionStatus.textContent =
+        "PROCESSING...";
+
+
+    lastDetection.textContent =
+        "YOLO detection is running...";
+
 
     startBtn.disabled = true;
-    startBtn.textContent = "⏳ Processing...";
 
-    /*
-     * Backend connection will be added on Day 2.
-     * For now this confirms that the frontend is working.
-     */
+    startBtn.textContent =
+        "⏳ Processing...";
 
-    setTimeout(function () {
 
-        detectionStatus.textContent = "READY";
+    try {
+
+        const response =
+            await fetch(
+                "/detect",
+                {
+                    method: "POST",
+                    body: formData
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "Server error: " +
+                response.status
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            "Flask response:",
+            data
+        );
+
+
+        // =================================================
+        // SUCCESS
+        // =================================================
+
+        if (data.success) {
+
+            detectionStatus.textContent =
+                "COMPLETED";
+
+
+            lastDetection.textContent =
+                data.message;
+
+
+            // ---------------------------------------------
+            // UPDATE STATISTICS
+            // ---------------------------------------------
+
+            if (data.stats) {
+
+                updateStatistics(
+                    data.stats
+                );
+
+            }
+
+
+            // ---------------------------------------------
+            // SHOW OUTPUT VIDEO
+            // ---------------------------------------------
+
+            if (data.output) {
+
+                videoPlaceholder.style.display =
+                    "none";
+
+
+                outputVideo.style.display =
+                    "block";
+
+
+                outputVideo.src =
+                    data.output +
+                    "?t=" +
+                    Date.now();
+
+
+                outputVideo.load();
+
+
+                outputVideo.oncanplay =
+                    function () {
+
+                        console.log(
+                            "Output video ready."
+                        );
+
+                    };
+
+
+                outputVideo.onerror =
+                    function () {
+
+                        console.error(
+                            "Video playback failed."
+                        );
+
+
+                        lastDetection.textContent =
+                            "Detection completed, but the video could not be played.";
+
+                    };
+
+            }
+
+        }
+
+
+        // =================================================
+        // ERROR
+        // =================================================
+
+        else {
+
+            detectionStatus.textContent =
+                "ERROR";
+
+
+            lastDetection.textContent =
+                data.message ||
+                "Detection failed.";
+
+
+            alert(
+                data.message ||
+                "Detection failed."
+            );
+
+        }
+
+    }
+
+
+    catch (error) {
+
+        console.error(
+            "Detection error:",
+            error
+        );
+
+
+        detectionStatus.textContent =
+            "ERROR";
+
 
         lastDetection.textContent =
-            "Frontend ready — backend connection coming next.";
+            "Connection failed.";
 
-        startBtn.disabled = false;
-        startBtn.textContent = "▶ Start Detection";
 
-    }, 1500);
+        alert(
+            "Could not connect to Flask server."
+        );
+
+    }
+
+
+    finally {
+
+        startBtn.disabled =
+            false;
+
+
+        startBtn.textContent =
+            "▶ Start Detection";
+
+    }
+
 });

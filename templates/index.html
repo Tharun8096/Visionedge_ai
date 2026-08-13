@@ -1,52 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
 
     <title>VisionEdge AI</title>
 
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
 </head>
+
 
 <body>
 
-    <!-- Header -->
+    <!-- =====================================================
+         HEADER
+    ====================================================== -->
+
     <header class="header">
+
         <div class="logo">
+
             <span class="logo-icon">◉</span>
+
             <div>
+
                 <h1>VisionEdge AI</h1>
-                <p>Smart Object Detection</p>
+
+                <p>
+                    Smart Object Detection
+                </p>
+
             </div>
+
         </div>
 
+
         <div class="system-status">
+
             <span class="status-dot"></span>
-            <span>System Ready</span>
+
+            <span>
+                System Ready
+            </span>
+
         </div>
+
     </header>
 
 
-    <!-- Main Dashboard -->
+    <!-- =====================================================
+         MAIN DASHBOARD
+    ====================================================== -->
+
     <main class="dashboard">
 
-        <!-- Welcome -->
+
+        <!-- =================================================
+             WELCOME
+        ================================================== -->
+
         <section class="welcome">
+
             <div>
-                <h2>Object Detection Dashboard</h2>
+
+                <h2>
+                    Object Detection Dashboard
+                </h2>
+
                 <p>
                     Detect and analyze objects from videos using
                     YOLO and computer vision.
                 </p>
+
             </div>
+
         </section>
 
 
-        <!-- Upload Section -->
+        <!-- =================================================
+             VIDEO INPUT
+        ================================================== -->
+
         <section class="upload-card">
 
-            <h3>📹 Video Input</h3>
+            <h3>
+                📹 Video Input
+            </h3>
+
 
             <div class="upload-area">
 
@@ -54,11 +104,16 @@
                     ⬆
                 </div>
 
-                <h4>Select a video</h4>
+
+                <h4>
+                    Select a video
+                </h4>
+
 
                 <p>
                     Upload a video file for object detection
                 </p>
+
 
                 <input
                     type="file"
@@ -66,7 +121,12 @@
                     accept="video/*"
                 >
 
-                <button id="startBtn" class="primary-btn">
+
+                <button
+                    id="startBtn"
+                    class="primary-btn"
+                    type="button"
+                >
                     ▶ Start Detection
                 </button>
 
@@ -75,59 +135,155 @@
         </section>
 
 
-        <!-- Statistics -->
+        <!-- =================================================
+             DETECTION STATISTICS
+        ================================================== -->
+
         <section class="stats-section">
 
-            <h3>📊 Detection Statistics</h3>
+            <h3>
+                📊 Detection Statistics
+            </h3>
+
 
             <div class="stats-grid">
 
+
+                <!-- PERSONS -->
+
                 <div class="stat-card person">
-                    <span class="stat-icon">👤</span>
+
+                    <span class="stat-icon">
+                        👤
+                    </span>
+
                     <div>
-                        <p>Persons</p>
-                        <h2 id="personCount">0</h2>
+
+                        <p>
+                            Persons
+                        </p>
+
+                        <h2 id="persons">
+                            0
+                        </h2>
+
                     </div>
+
                 </div>
+
+
+                <!-- PHONES -->
 
                 <div class="stat-card phone">
-                    <span class="stat-icon">📱</span>
+
+                    <span class="stat-icon">
+                        📱
+                    </span>
+
                     <div>
-                        <p>Phones</p>
-                        <h2 id="phoneCount">0</h2>
+
+                        <p>
+                            Phones
+                        </p>
+
+                        <h2 id="phones">
+                            0
+                        </h2>
+
                     </div>
+
                 </div>
+
+
+                <!-- CARS -->
 
                 <div class="stat-card car">
-                    <span class="stat-icon">🚗</span>
+
+                    <span class="stat-icon">
+                        🚗
+                    </span>
+
                     <div>
-                        <p>Cars</p>
-                        <h2 id="carCount">0</h2>
+
+                        <p>
+                            Cars
+                        </p>
+
+                        <h2 id="cars">
+                            0
+                        </h2>
+
                     </div>
+
                 </div>
+
+
+                <!-- BUSES -->
 
                 <div class="stat-card bus">
-                    <span class="stat-icon">🚌</span>
+
+                    <span class="stat-icon">
+                        🚌
+                    </span>
+
                     <div>
-                        <p>Buses</p>
-                        <h2 id="busCount">0</h2>
+
+                        <p>
+                            Buses
+                        </p>
+
+                        <h2 id="buses">
+                            0
+                        </h2>
+
                     </div>
+
                 </div>
+
+
+                <!-- TRUCKS -->
 
                 <div class="stat-card truck">
-                    <span class="stat-icon">🚚</span>
+
+                    <span class="stat-icon">
+                        🚚
+                    </span>
+
                     <div>
-                        <p>Trucks</p>
-                        <h2 id="truckCount">0</h2>
+
+                        <p>
+                            Trucks
+                        </p>
+
+                        <h2 id="trucks">
+                            0
+                        </h2>
+
                     </div>
+
                 </div>
 
+
+                <!-- MOTORCYCLES -->
+
                 <div class="stat-card motorcycle">
-                    <span class="stat-icon">🏍️</span>
+
+                    <span class="stat-icon">
+                        🏍️
+                    </span>
+
                     <div>
-                        <p>Motorcycles</p>
-                        <h2 id="motorcycleCount">0</h2>
+
+                        <p>
+                            Motorcycles
+                        </p>
+
+                        <h2 id="motorcycles">
+                            0
+                        </h2>
+
                     </div>
+
                 </div>
 
             </div>
@@ -135,36 +291,69 @@
         </section>
 
 
-        <!-- Detection Information -->
+        <!-- =================================================
+             PERFORMANCE + STATUS
+        ================================================== -->
+
         <section class="info-grid">
+
+
+            <!-- PERFORMANCE -->
 
             <div class="info-card">
 
-                <h3>⚡ Performance</h3>
+                <h3>
+                    ⚡ Performance
+                </h3>
+
 
                 <div class="info-row">
-                    <span>FPS</span>
-                    <strong id="fps">0</strong>
+
+                    <span>
+                        FPS
+                    </span>
+
+                    <strong id="fps">
+                        0
+                    </strong>
+
                 </div>
 
+
                 <div class="info-row">
-                    <span>Total Objects</span>
-                    <strong id="totalObjects">0</strong>
+
+                    <span>
+                        Total Objects
+                    </span>
+
+                    <strong id="totalObjects">
+                        0
+                    </strong>
+
                 </div>
 
             </div>
 
 
+            <!-- DETECTION STATUS -->
+
             <div class="info-card">
 
-                <h3>🎯 Detection Status</h3>
+                <h3>
+                    🎯 Detection Status
+                </h3>
+
 
                 <div class="status-large">
+
                     <span class="status-dot"></span>
+
                     <strong id="detectionStatus">
                         READY
                     </strong>
+
                 </div>
+
 
                 <p id="lastDetection">
                     No detection yet
@@ -175,12 +364,21 @@
         </section>
 
 
-        <!-- Video Preview -->
+        <!-- =================================================
+             VIDEO OUTPUT
+        ================================================== -->
+
         <section class="video-section">
 
-            <h3>🎬 Detection Output</h3>
+            <h3>
+                🎬 Detection Output
+            </h3>
+
 
             <div class="video-container">
+
+
+                <!-- PLACEHOLDER -->
 
                 <div id="videoPlaceholder">
 
@@ -194,10 +392,15 @@
 
                 </div>
 
+
+                <!-- OUTPUT VIDEO -->
+
                 <video
                     id="outputVideo"
                     controls
-                    style="display:none;"
+                    playsinline
+                    preload="metadata"
+                    style="display: none;"
                 >
                 </video>
 
@@ -208,7 +411,10 @@
     </main>
 
 
-    <!-- Footer -->
+    <!-- =====================================================
+         FOOTER
+    ====================================================== -->
+
     <footer>
 
         <p>
@@ -219,7 +425,15 @@
     </footer>
 
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <!-- =====================================================
+         JAVASCRIPT
+    ====================================================== -->
+
+    <script
+        src="{{ url_for('static', filename='script.js') }}">
+    </script>
+
 
 </body>
+
 </html>
