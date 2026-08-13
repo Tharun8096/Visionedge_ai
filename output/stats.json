@@ -1,0 +1,11 @@
+{
+    "persons": 11,
+    "phones": 0,
+    "cars": 4,
+    "buses": 0,
+    "trucks": 0,
+    "motorcycles": 0,
+    "bicycles": 3,
+    "total_objects": 16,
+    "fps": 24
+}

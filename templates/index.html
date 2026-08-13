@@ -98,37 +98,145 @@
             </h3>
 
 
-            <div class="upload-area">
+            <!-- MODE BUTTONS -->
 
-                <div class="upload-icon">
-                    ⬆
-                </div>
+            <div class="mode-buttons">
 
-
-                <h4>
-                    Select a video
-                </h4>
-
-
-                <p>
-                    Upload a video file for object detection
-                </p>
-
-
-                <input
-                    type="file"
-                    id="videoInput"
-                    accept="video/*"
+                <button
+                    id="uploadModeBtn"
+                    class="mode-btn active"
+                    type="button"
                 >
+                    📁 Upload Video
+                </button>
 
 
                 <button
-                    id="startBtn"
-                    class="primary-btn"
+                    id="cameraModeBtn"
+                    class="mode-btn"
                     type="button"
                 >
-                    ▶ Start Detection
+                    📷 Live Camera
                 </button>
+
+            </div>
+
+
+            <!-- =================================================
+                 UPLOAD PANEL
+            ================================================== -->
+
+            <div
+                id="uploadPanel"
+                class="input-panel"
+            >
+
+                <div class="upload-area">
+
+                    <div class="upload-icon">
+                        ⬆
+                    </div>
+
+
+                    <h4>
+                        Select a video
+                    </h4>
+
+
+                    <p>
+                        Upload a video file for YOLO object detection
+                    </p>
+
+
+                    <input
+                        type="file"
+                        id="videoInput"
+                        accept="video/*"
+                    >
+
+
+                    <button
+                        id="startBtn"
+                        class="primary-btn"
+                        type="button"
+                    >
+                        ▶ Start Detection
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- =================================================
+                 LIVE CAMERA PANEL
+            ================================================== -->
+
+            <div
+                id="cameraPanel"
+                class="input-panel"
+                style="display: none;"
+            >
+
+                <div class="camera-area">
+
+                    <h4>
+                        📷 Live Camera
+                    </h4>
+
+                    <p>
+                        Use your camera for live YOLO object detection
+                    </p>
+
+
+                    <!-- Hidden camera source -->
+
+                    <video
+                        id="cameraVideo"
+                        autoplay
+                        playsinline
+                        muted
+                    ></video>
+
+
+                    <!-- YOLO processed output -->
+
+                    <canvas
+                        id="cameraCanvas"
+                    ></canvas>
+
+
+                    <div class="camera-buttons">
+
+                        <button
+                            id="startCameraBtn"
+                            class="primary-btn"
+                            type="button"
+                        >
+                            📷 Start Camera
+                        </button>
+
+
+                        <button
+                            id="stopCameraBtn"
+                            class="danger-btn"
+                            type="button"
+                            disabled
+                        >
+                            ⏹ Stop Camera
+                        </button>
+
+                    </div>
+
+
+                    <p
+                        id="cameraMessage"
+                        class="camera-message"
+                    >
+                        Camera is stopped
+                    </p>
+
+                </div>
 
             </div>
 
@@ -378,7 +486,7 @@
             <div class="video-container">
 
 
-                <!-- PLACEHOLDER -->
+                <!-- UPLOADED VIDEO OUTPUT -->
 
                 <div id="videoPlaceholder">
 
@@ -393,16 +501,13 @@
                 </div>
 
 
-                <!-- OUTPUT VIDEO -->
-
                 <video
                     id="outputVideo"
                     controls
                     playsinline
                     preload="metadata"
                     style="display: none;"
-                >
-                </video>
+                ></video>
 
             </div>
 
