@@ -22,6 +22,7 @@
 
 <body>
 
+
     <!-- =====================================================
          HEADER
     ====================================================== -->
@@ -30,11 +31,15 @@
 
         <div class="logo">
 
-            <span class="logo-icon">◉</span>
+            <span class="logo-icon">
+                ◉
+            </span>
 
             <div>
 
-                <h1>VisionEdge AI</h1>
+                <h1>
+                    VisionEdge AI
+                </h1>
 
                 <p>
                     Smart Object Detection
@@ -56,6 +61,7 @@
         </div>
 
     </header>
+
 
 
     <!-- =====================================================
@@ -85,6 +91,7 @@
             </div>
 
         </section>
+
 
 
         <!-- =================================================
@@ -120,6 +127,7 @@
                 </button>
 
             </div>
+
 
 
             <!-- =================================================
@@ -168,6 +176,7 @@
             </div>
 
 
+
             <!-- =================================================
                  LIVE CAMERA PANEL
             ================================================== -->
@@ -180,13 +189,16 @@
 
                 <div class="camera-area">
 
+
                     <h4>
                         📷 Live Camera
                     </h4>
 
+
                     <p>
                         Use your camera for live YOLO object detection
                     </p>
+
 
 
                     <!-- Hidden camera source -->
@@ -199,14 +211,19 @@
                     ></video>
 
 
-                    <!-- YOLO processed output -->
+
+                    <!-- Main YOLO processed camera output -->
 
                     <canvas
                         id="cameraCanvas"
                     ></canvas>
 
 
+
+                    <!-- CAMERA BUTTONS -->
+
                     <div class="camera-buttons">
+
 
                         <button
                             id="startCameraBtn"
@@ -226,7 +243,9 @@
                             ⏹ Stop Camera
                         </button>
 
+
                     </div>
+
 
 
                     <p
@@ -236,11 +255,13 @@
                         Camera is stopped
                     </p>
 
+
                 </div>
 
             </div>
 
         </section>
+
 
 
         <!-- =================================================
@@ -249,9 +270,11 @@
 
         <section class="stats-section">
 
+
             <h3>
                 📊 Detection Statistics
             </h3>
+
 
 
             <div class="stats-grid">
@@ -264,6 +287,7 @@
                     <span class="stat-icon">
                         👤
                     </span>
+
 
                     <div>
 
@@ -280,6 +304,7 @@
                 </div>
 
 
+
                 <!-- PHONES -->
 
                 <div class="stat-card phone">
@@ -287,6 +312,7 @@
                     <span class="stat-icon">
                         📱
                     </span>
+
 
                     <div>
 
@@ -303,6 +329,7 @@
                 </div>
 
 
+
                 <!-- CARS -->
 
                 <div class="stat-card car">
@@ -310,6 +337,7 @@
                     <span class="stat-icon">
                         🚗
                     </span>
+
 
                     <div>
 
@@ -326,6 +354,7 @@
                 </div>
 
 
+
                 <!-- BUSES -->
 
                 <div class="stat-card bus">
@@ -333,6 +362,7 @@
                     <span class="stat-icon">
                         🚌
                     </span>
+
 
                     <div>
 
@@ -349,6 +379,7 @@
                 </div>
 
 
+
                 <!-- TRUCKS -->
 
                 <div class="stat-card truck">
@@ -356,6 +387,7 @@
                     <span class="stat-icon">
                         🚚
                     </span>
+
 
                     <div>
 
@@ -372,6 +404,7 @@
                 </div>
 
 
+
                 <!-- MOTORCYCLES -->
 
                 <div class="stat-card motorcycle">
@@ -379,6 +412,7 @@
                     <span class="stat-icon">
                         🏍️
                     </span>
+
 
                     <div>
 
@@ -394,9 +428,11 @@
 
                 </div>
 
+
             </div>
 
         </section>
+
 
 
         <!-- =================================================
@@ -409,6 +445,7 @@
             <!-- PERFORMANCE -->
 
             <div class="info-card">
+
 
                 <h3>
                     ⚡ Performance
@@ -440,12 +477,15 @@
 
                 </div>
 
+
             </div>
+
 
 
             <!-- DETECTION STATUS -->
 
             <div class="info-card">
+
 
                 <h3>
                     🎯 Detection Status
@@ -467,53 +507,86 @@
                     No detection yet
                 </p>
 
+
             </div>
+
 
         </section>
 
 
+
         <!-- =================================================
-             VIDEO OUTPUT
+             DETECTION OUTPUT
         ================================================== -->
 
         <section class="video-section">
+
 
             <h3>
                 🎬 Detection Output
             </h3>
 
 
+
             <div class="video-container">
 
 
-                <!-- UPLOADED VIDEO OUTPUT -->
+                <!-- =================================================
+                     DEFAULT PLACEHOLDER
+                ================================================== -->
 
                 <div id="videoPlaceholder">
+
 
                     <div class="big-video-icon">
                         ▶
                     </div>
 
+
                     <p>
                         Detection output will appear here
                     </p>
 
+
                 </div>
 
+
+
+                <!-- =================================================
+                     LIVE CAMERA YOLO OUTPUT
+
+                     JavaScript will copy the processed
+                     camera frame into this canvas.
+                ================================================== -->
+
+                <canvas
+                    id="liveOutputCanvas"
+                ></canvas>
+
+
+
+                <!-- =================================================
+                     UPLOADED VIDEO YOLO OUTPUT
+
+                     Used when Upload Video mode is selected.
+                ================================================== -->
 
                 <video
                     id="outputVideo"
                     controls
                     playsinline
                     preload="metadata"
-                    style="display: none;"
                 ></video>
+
 
             </div>
 
+
         </section>
 
+
     </main>
+
 
 
     <!-- =====================================================
@@ -530,13 +603,14 @@
     </footer>
 
 
+
     <!-- =====================================================
          JAVASCRIPT
     ====================================================== -->
 
     <script
-        src="{{ url_for('static', filename='script.js') }}">
-    </script>
+        src="{{ url_for('static', filename='script.js') }}"
+    ></script>
 
 
 </body>

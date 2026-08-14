@@ -1,4 +1,9 @@
 // =========================================================
+// VisionEdge AI - Main JavaScript
+// =========================================================
+
+
+// =========================================================
 // ELEMENTS
 // =========================================================
 
@@ -48,6 +53,9 @@ const cameraVideo =
 const cameraCanvas =
     document.getElementById("cameraCanvas");
 
+const liveOutputCanvas =
+    document.getElementById("liveOutputCanvas");
+
 const startCameraBtn =
     document.getElementById("startCameraBtn");
 
@@ -68,7 +76,16 @@ let cameraRunning = false;
 
 let cameraProcessing = false;
 
-let cameraInterval = null;
+
+// =========================================================
+// INITIAL UI
+// =========================================================
+
+liveOutputCanvas.style.display = "none";
+
+outputVideo.style.display = "none";
+
+videoPlaceholder.style.display = "block";
 
 
 // =========================================================
@@ -77,39 +94,26 @@ let cameraInterval = null;
 
 function updateStatistics(stats) {
 
-    console.log(
-        "Received statistics:",
-        stats
-    );
-
-
     document.getElementById("persons").textContent =
         stats.persons ?? 0;
-
 
     document.getElementById("phones").textContent =
         stats.phones ?? 0;
 
-
     document.getElementById("cars").textContent =
         stats.cars ?? 0;
-
 
     document.getElementById("buses").textContent =
         stats.buses ?? 0;
 
-
     document.getElementById("trucks").textContent =
         stats.trucks ?? 0;
-
 
     document.getElementById("motorcycles").textContent =
         stats.motorcycles ?? 0;
 
-
     document.getElementById("totalObjects").textContent =
         stats.total_objects ?? 0;
-
 
     document.getElementById("fps").textContent =
         stats.fps ?? 0;
@@ -152,13 +156,9 @@ uploadModeBtn.addEventListener(
     "click",
     function () {
 
-        uploadModeBtn.classList.add(
-            "active"
-        );
+        uploadModeBtn.classList.add("active");
 
-        cameraModeBtn.classList.remove(
-            "active"
-        );
+        cameraModeBtn.classList.remove("active");
 
 
         uploadPanel.style.display =
@@ -169,6 +169,19 @@ uploadModeBtn.addEventListener(
 
 
         stopCamera();
+
+
+        detectionStatus.textContent =
+            "READY";
+
+        lastDetection.textContent =
+            "Ready to upload a video.";
+
+
+        // Show normal video output state
+
+        liveOutputCanvas.style.display =
+            "none";
 
     }
 );
@@ -182,13 +195,9 @@ cameraModeBtn.addEventListener(
     "click",
     function () {
 
-        cameraModeBtn.classList.add(
-            "active"
-        );
+        cameraModeBtn.classList.add("active");
 
-        uploadModeBtn.classList.remove(
-            "active"
-        );
+        uploadModeBtn.classList.remove("active");
 
 
         uploadPanel.style.display =
@@ -209,7 +218,7 @@ cameraModeBtn.addEventListener(
 
 
 // =========================================================
-// START UPLOADED VIDEO DETECTION
+// UPLOADED VIDEO DETECTION
 // =========================================================
 
 startBtn.addEventListener(
@@ -277,7 +286,6 @@ startBtn.addEventListener(
                     "Server error: " +
                     response.status
                 );
-
             }
 
 
@@ -306,15 +314,24 @@ startBtn.addEventListener(
                     updateStatistics(
                         data.stats
                     );
-
                 }
 
 
                 if (data.output) {
 
+                    // Hide live output
+
+                    liveOutputCanvas.style.display =
+                        "none";
+
+
+                    // Hide placeholder
+
                     videoPlaceholder.style.display =
                         "none";
 
+
+                    // Show uploaded video
 
                     outputVideo.style.display =
                         "block";
@@ -390,7 +407,7 @@ startBtn.addEventListener(
 
 
 // =========================================================
-// START CAMERA
+// START CAMERA BUTTON
 // =========================================================
 
 startCameraBtn.addEventListener(
@@ -400,7 +417,7 @@ startCameraBtn.addEventListener(
 
 
 // =========================================================
-// START CAMERA FUNCTION
+// START CAMERA
 // =========================================================
 
 async function startCamera() {
@@ -408,7 +425,6 @@ async function startCamera() {
     if (cameraRunning) {
 
         return;
-
     }
 
 
@@ -430,6 +446,7 @@ async function startCamera() {
             await navigator.mediaDevices.getUserMedia({
 
                 video: {
+
                     width: {
                         ideal: 640
                     },
@@ -439,6 +456,7 @@ async function startCamera() {
                     },
 
                     facingMode: "user"
+
                 },
 
                 audio: false
@@ -477,7 +495,7 @@ async function startCamera() {
             "🟢 Camera active — YOLO detecting objects";
 
 
-        // Set canvas size
+        // Camera canvas size
 
         cameraCanvas.width =
             cameraVideo.videoWidth ||
@@ -489,7 +507,7 @@ async function startCamera() {
             480;
 
 
-        // Start detection loop
+        // Start processing
 
         processCameraFrame();
 
@@ -533,13 +551,11 @@ async function processCameraFrame() {
     if (!cameraRunning) {
 
         return;
-
     }
 
 
     if (
-        cameraVideo.readyState <
-        2
+        cameraVideo.readyState < 2
     ) {
 
         requestAnimationFrame(
@@ -547,12 +563,10 @@ async function processCameraFrame() {
         );
 
         return;
-
     }
 
 
-    // Don't send another frame while
-    // previous frame is processing
+    // Prevent multiple requests
 
     if (cameraProcessing) {
 
@@ -562,7 +576,6 @@ async function processCameraFrame() {
         );
 
         return;
-
     }
 
 
@@ -572,36 +585,45 @@ async function processCameraFrame() {
 
     try {
 
-        const canvas =
+        // =============================================
+        // CREATE FRAME CANVAS
+        // =============================================
+
+        const frameCanvas =
             document.createElement(
                 "canvas"
             );
 
 
-        canvas.width =
+        frameCanvas.width =
             cameraVideo.videoWidth;
 
 
-        canvas.height =
+        frameCanvas.height =
             cameraVideo.videoHeight;
 
 
-        const context =
-            canvas.getContext(
+        const frameContext =
+            frameCanvas.getContext(
                 "2d"
             );
 
 
-        context.drawImage(
+        frameContext.drawImage(
             cameraVideo,
             0,
             0,
-            canvas.width,
-            canvas.height
+            frameCanvas.width,
+            frameCanvas.height
         );
 
 
-        canvas.toBlob(
+        // =============================================
+        // CONVERT FRAME TO JPEG
+        // =============================================
+
+        frameCanvas.toBlob(
+
             async function (blob) {
 
                 if (!blob) {
@@ -612,11 +634,14 @@ async function processCameraFrame() {
                     processCameraFrame();
 
                     return;
-
                 }
 
 
                 try {
+
+                    // =================================
+                    // SEND FRAME TO FLASK
+                    // =================================
 
                     const formData =
                         new FormData();
@@ -639,19 +664,17 @@ async function processCameraFrame() {
                         );
 
 
-                    if (
-                        !response.ok
-                    ) {
+                    if (!response.ok) {
 
                         throw new Error(
                             "Live detection server error"
                         );
-
                     }
 
 
-                    // Read statistics
-                    // from response headers
+                    // =================================
+                    // READ DETECTION STATISTICS
+                    // =================================
 
                     const stats = {
 
@@ -714,12 +737,18 @@ async function processCameraFrame() {
                     };
 
 
+                    // =================================
+                    // UPDATE DASHBOARD
+                    // =================================
+
                     updateStatistics(
                         stats
                     );
 
 
-                    // Get processed image
+                    // =================================
+                    // GET PROCESSED YOLO IMAGE
+                    // =================================
 
                     const imageBlob =
                         await response.blob();
@@ -738,25 +767,75 @@ async function processCameraFrame() {
                     image.onload =
                         function () {
 
+                            // =================================
+                            // MAIN LIVE CAMERA CANVAS
+                            // =================================
+
                             cameraCanvas.width =
                                 image.width;
+
 
                             cameraCanvas.height =
                                 image.height;
 
 
-                            const ctx =
+                            const cameraContext =
                                 cameraCanvas.getContext(
                                     "2d"
                                 );
 
 
-                            ctx.drawImage(
+                            cameraContext.drawImage(
                                 image,
                                 0,
                                 0
                             );
 
+
+                            // =================================
+                            // DETECTION OUTPUT CANVAS
+                            // =================================
+
+                            liveOutputCanvas.width =
+                                image.width;
+
+
+                            liveOutputCanvas.height =
+                                image.height;
+
+
+                            const outputContext =
+                                liveOutputCanvas.getContext(
+                                    "2d"
+                                );
+
+
+                            outputContext.drawImage(
+                                image,
+                                0,
+                                0
+                            );
+
+
+                            // =================================
+                            // SHOW LIVE OUTPUT
+                            // =================================
+
+                            videoPlaceholder.style.display =
+                                "none";
+
+
+                            outputVideo.style.display =
+                                "none";
+
+
+                            liveOutputCanvas.style.display =
+                                "block";
+
+
+                            // =================================
+                            // RELEASE IMAGE URL
+                            // =================================
 
                             URL.revokeObjectURL(
                                 imageURL
@@ -769,13 +848,19 @@ async function processCameraFrame() {
                         imageURL;
 
 
+                    // =================================
+                    // STATUS
+                    // =================================
+
                     detectionStatus.textContent =
                         "LIVE";
 
 
                     lastDetection.textContent =
                         stats.total_objects > 0
+
                             ? "Objects detected in live camera."
+
                             : "No supported objects detected.";
 
                 }
@@ -811,6 +896,7 @@ async function processCameraFrame() {
             "image/jpeg",
 
             0.75
+
         );
 
     }
@@ -842,7 +928,7 @@ async function processCameraFrame() {
 
 
 // =========================================================
-// STOP CAMERA
+// STOP CAMERA BUTTON
 // =========================================================
 
 stopCameraBtn.addEventListener(
@@ -852,7 +938,7 @@ stopCameraBtn.addEventListener(
 
 
 // =========================================================
-// STOP CAMERA FUNCTION
+// STOP CAMERA
 // =========================================================
 
 function stopCamera() {
@@ -865,6 +951,8 @@ function stopCamera() {
         false;
 
 
+    // Stop camera tracks
+
     if (cameraStream) {
 
         cameraStream
@@ -876,6 +964,7 @@ function stopCamera() {
 
                 }
             );
+
 
         cameraStream =
             null;
@@ -910,18 +999,48 @@ function stopCamera() {
     resetStatistics();
 
 
-    const ctx =
+    // Clear camera canvas
+
+    const cameraContext =
         cameraCanvas.getContext(
             "2d"
         );
 
 
-    ctx.clearRect(
+    cameraContext.clearRect(
         0,
         0,
         cameraCanvas.width,
         cameraCanvas.height
     );
+
+
+    // Clear live output canvas
+
+    const outputContext =
+        liveOutputCanvas.getContext(
+            "2d"
+        );
+
+
+    outputContext.clearRect(
+        0,
+        0,
+        liveOutputCanvas.width,
+        liveOutputCanvas.height
+    );
+
+
+    // Hide live output
+
+    liveOutputCanvas.style.display =
+        "none";
+
+
+    // Show placeholder
+
+    videoPlaceholder.style.display =
+        "block";
 
 }
 
