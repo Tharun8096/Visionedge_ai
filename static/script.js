@@ -25,11 +25,6 @@ const outputVideo =
 const videoPlaceholder =
     document.getElementById("videoPlaceholder");
 
-
-// =========================================================
-// MODE BUTTONS
-// =========================================================
-
 const uploadModeBtn =
     document.getElementById("uploadModeBtn");
 
@@ -41,11 +36,6 @@ const uploadPanel =
 
 const cameraPanel =
     document.getElementById("cameraPanel");
-
-
-// =========================================================
-// CAMERA ELEMENTS
-// =========================================================
 
 const cameraVideo =
     document.getElementById("cameraVideo");
@@ -78,18 +68,21 @@ let cameraProcessing = false;
 
 
 // =========================================================
-// INITIAL UI
+// INITIAL STATE
 // =========================================================
 
-liveOutputCanvas.style.display = "none";
+liveOutputCanvas.style.display =
+    "none";
 
-outputVideo.style.display = "none";
+outputVideo.style.display =
+    "none";
 
-videoPlaceholder.style.display = "block";
+videoPlaceholder.style.display =
+    "block";
 
 
 // =========================================================
-// UPDATE STATISTICS
+// STATISTICS
 // =========================================================
 
 function updateStatistics(stats) {
@@ -129,19 +122,12 @@ function resetStatistics() {
     updateStatistics({
 
         persons: 0,
-
         phones: 0,
-
         cars: 0,
-
         buses: 0,
-
         trucks: 0,
-
         motorcycles: 0,
-
         total_objects: 0,
-
         fps: 0
 
     });
@@ -160,25 +146,19 @@ uploadModeBtn.addEventListener(
 
         cameraModeBtn.classList.remove("active");
 
-
         uploadPanel.style.display =
             "block";
 
         cameraPanel.style.display =
             "none";
 
-
         stopCamera();
-
 
         detectionStatus.textContent =
             "READY";
 
         lastDetection.textContent =
             "Ready to upload a video.";
-
-
-        // Show normal video output state
 
         liveOutputCanvas.style.display =
             "none";
@@ -199,13 +179,11 @@ cameraModeBtn.addEventListener(
 
         uploadModeBtn.classList.remove("active");
 
-
         uploadPanel.style.display =
             "none";
 
         cameraPanel.style.display =
             "block";
-
 
         detectionStatus.textContent =
             "READY";
@@ -218,7 +196,7 @@ cameraModeBtn.addEventListener(
 
 
 // =========================================================
-// UPLOADED VIDEO DETECTION
+// UPLOAD VIDEO DETECTION
 // =========================================================
 
 startBtn.addEventListener(
@@ -255,14 +233,11 @@ startBtn.addEventListener(
         detectionStatus.textContent =
             "PROCESSING...";
 
-
         lastDetection.textContent =
             "YOLO detection is running...";
 
-
         startBtn.disabled =
             true;
-
 
         startBtn.textContent =
             "⏳ Processing...";
@@ -286,6 +261,7 @@ startBtn.addEventListener(
                     "Server error: " +
                     response.status
                 );
+
             }
 
 
@@ -304,7 +280,6 @@ startBtn.addEventListener(
                 detectionStatus.textContent =
                     "COMPLETED";
 
-
                 lastDetection.textContent =
                     data.message;
 
@@ -314,34 +289,25 @@ startBtn.addEventListener(
                     updateStatistics(
                         data.stats
                     );
+
                 }
 
 
                 if (data.output) {
 
-                    // Hide live output
-
                     liveOutputCanvas.style.display =
                         "none";
-
-
-                    // Hide placeholder
 
                     videoPlaceholder.style.display =
                         "none";
 
-
-                    // Show uploaded video
-
                     outputVideo.style.display =
                         "block";
-
 
                     outputVideo.src =
                         data.output +
                         "?t=" +
                         Date.now();
-
 
                     outputVideo.load();
 
@@ -354,11 +320,9 @@ startBtn.addEventListener(
                 detectionStatus.textContent =
                     "ERROR";
 
-
                 lastDetection.textContent =
                     data.message ||
                     "Detection failed.";
-
 
                 alert(
                     data.message ||
@@ -376,14 +340,11 @@ startBtn.addEventListener(
                 error
             );
 
-
             detectionStatus.textContent =
                 "ERROR";
 
-
             lastDetection.textContent =
                 "Connection failed.";
-
 
             alert(
                 "Could not connect to Flask server."
@@ -396,7 +357,6 @@ startBtn.addEventListener(
             startBtn.disabled =
                 false;
 
-
             startBtn.textContent =
                 "▶ Start Detection";
 
@@ -407,7 +367,7 @@ startBtn.addEventListener(
 
 
 // =========================================================
-// START CAMERA BUTTON
+// START CAMERA
 // =========================================================
 
 startCameraBtn.addEventListener(
@@ -415,10 +375,6 @@ startCameraBtn.addEventListener(
     startCamera
 );
 
-
-// =========================================================
-// START CAMERA
-// =========================================================
 
 async function startCamera() {
 
@@ -433,10 +389,8 @@ async function startCamera() {
         detectionStatus.textContent =
             "STARTING...";
 
-
         lastDetection.textContent =
             "Requesting camera permission...";
-
 
         cameraMessage.textContent =
             "Starting camera...";
@@ -448,11 +402,16 @@ async function startCamera() {
                 video: {
 
                     width: {
-                        ideal: 640
+                        ideal: 480
                     },
 
                     height: {
-                        ideal: 480
+                        ideal: 360
+                    },
+
+                    frameRate: {
+                        ideal: 15,
+                        max: 20
                     },
 
                     facingMode: "user"
@@ -478,7 +437,6 @@ async function startCamera() {
         startCameraBtn.disabled =
             true;
 
-
         stopCameraBtn.disabled =
             false;
 
@@ -486,28 +444,21 @@ async function startCamera() {
         detectionStatus.textContent =
             "LIVE";
 
-
         lastDetection.textContent =
             "Live YOLO detection is running.";
 
-
         cameraMessage.textContent =
-            "🟢 Camera active — YOLO detecting objects";
+            "🟢 Camera active — YOLO detecting objects.";
 
-
-        // Camera canvas size
 
         cameraCanvas.width =
             cameraVideo.videoWidth ||
-            640;
-
+            480;
 
         cameraCanvas.height =
             cameraVideo.videoHeight ||
-            480;
+            360;
 
-
-        // Start processing
 
         processCameraFrame();
 
@@ -520,21 +471,17 @@ async function startCamera() {
             error
         );
 
-
         detectionStatus.textContent =
             "ERROR";
-
 
         cameraMessage.textContent =
             "❌ Camera could not be started.";
 
-
         lastDetection.textContent =
             "Please allow camera permission.";
 
-
         alert(
-            "Camera access failed. Please allow camera permission in your browser."
+            "Camera access failed. Please allow camera permission."
         );
 
     }
@@ -554,9 +501,7 @@ async function processCameraFrame() {
     }
 
 
-    if (
-        cameraVideo.readyState < 2
-    ) {
+    if (cameraVideo.readyState < 2) {
 
         requestAnimationFrame(
             processCameraFrame
@@ -565,8 +510,6 @@ async function processCameraFrame() {
         return;
     }
 
-
-    // Prevent multiple requests
 
     if (cameraProcessing) {
 
@@ -585,10 +528,6 @@ async function processCameraFrame() {
 
     try {
 
-        // =============================================
-        // CREATE FRAME CANVAS
-        // =============================================
-
         const frameCanvas =
             document.createElement(
                 "canvas"
@@ -596,11 +535,12 @@ async function processCameraFrame() {
 
 
         frameCanvas.width =
-            cameraVideo.videoWidth;
-
+            cameraVideo.videoWidth ||
+            480;
 
         frameCanvas.height =
-            cameraVideo.videoHeight;
+            cameraVideo.videoHeight ||
+            360;
 
 
         const frameContext =
@@ -618,10 +558,6 @@ async function processCameraFrame() {
         );
 
 
-        // =============================================
-        // CONVERT FRAME TO JPEG
-        // =============================================
-
         frameCanvas.toBlob(
 
             async function (blob) {
@@ -634,14 +570,11 @@ async function processCameraFrame() {
                     processCameraFrame();
 
                     return;
+
                 }
 
 
                 try {
-
-                    // =================================
-                    // SEND FRAME TO FLASK
-                    // =================================
 
                     const formData =
                         new FormData();
@@ -669,12 +602,9 @@ async function processCameraFrame() {
                         throw new Error(
                             "Live detection server error"
                         );
+
                     }
 
-
-                    // =================================
-                    // READ DETECTION STATISTICS
-                    // =================================
 
                     const stats = {
 
@@ -737,18 +667,10 @@ async function processCameraFrame() {
                     };
 
 
-                    // =================================
-                    // UPDATE DASHBOARD
-                    // =================================
-
                     updateStatistics(
                         stats
                     );
 
-
-                    // =================================
-                    // GET PROCESSED YOLO IMAGE
-                    // =================================
 
                     const imageBlob =
                         await response.blob();
@@ -767,13 +689,10 @@ async function processCameraFrame() {
                     image.onload =
                         function () {
 
-                            // =================================
-                            // MAIN LIVE CAMERA CANVAS
-                            // =================================
+                            // Main camera output
 
                             cameraCanvas.width =
                                 image.width;
-
 
                             cameraCanvas.height =
                                 image.height;
@@ -792,13 +711,10 @@ async function processCameraFrame() {
                             );
 
 
-                            // =================================
-                            // DETECTION OUTPUT CANVAS
-                            // =================================
+                            // Detection Output
 
                             liveOutputCanvas.width =
                                 image.width;
-
 
                             liveOutputCanvas.height =
                                 image.height;
@@ -817,25 +733,17 @@ async function processCameraFrame() {
                             );
 
 
-                            // =================================
-                            // SHOW LIVE OUTPUT
-                            // =================================
+                            // Show live output
 
                             videoPlaceholder.style.display =
                                 "none";
 
-
                             outputVideo.style.display =
                                 "none";
-
 
                             liveOutputCanvas.style.display =
                                 "block";
 
-
-                            // =================================
-                            // RELEASE IMAGE URL
-                            // =================================
 
                             URL.revokeObjectURL(
                                 imageURL
@@ -847,10 +755,6 @@ async function processCameraFrame() {
                     image.src =
                         imageURL;
 
-
-                    // =================================
-                    // STATUS
-                    // =================================
 
                     detectionStatus.textContent =
                         "LIVE";
@@ -895,7 +799,7 @@ async function processCameraFrame() {
 
             "image/jpeg",
 
-            0.75
+            0.60
 
         );
 
@@ -904,7 +808,7 @@ async function processCameraFrame() {
     catch (error) {
 
         console.error(
-            "Frame error:",
+            "Frame processing error:",
             error
         );
 
@@ -928,7 +832,7 @@ async function processCameraFrame() {
 
 
 // =========================================================
-// STOP CAMERA BUTTON
+// STOP CAMERA
 // =========================================================
 
 stopCameraBtn.addEventListener(
@@ -937,21 +841,14 @@ stopCameraBtn.addEventListener(
 );
 
 
-// =========================================================
-// STOP CAMERA
-// =========================================================
-
 function stopCamera() {
 
     cameraRunning =
         false;
 
-
     cameraProcessing =
         false;
 
-
-    // Stop camera tracks
 
     if (cameraStream) {
 
@@ -965,7 +862,6 @@ function stopCamera() {
                 }
             );
 
-
         cameraStream =
             null;
 
@@ -978,7 +874,6 @@ function stopCamera() {
 
     startCameraBtn.disabled =
         false;
-
 
     stopCameraBtn.disabled =
         true;
@@ -999,8 +894,6 @@ function stopCamera() {
     resetStatistics();
 
 
-    // Clear camera canvas
-
     const cameraContext =
         cameraCanvas.getContext(
             "2d"
@@ -1014,8 +907,6 @@ function stopCamera() {
         cameraCanvas.height
     );
 
-
-    // Clear live output canvas
 
     const outputContext =
         liveOutputCanvas.getContext(
@@ -1031,13 +922,9 @@ function stopCamera() {
     );
 
 
-    // Hide live output
-
     liveOutputCanvas.style.display =
         "none";
 
-
-    // Show placeholder
 
     videoPlaceholder.style.display =
         "block";
@@ -1046,7 +933,7 @@ function stopCamera() {
 
 
 // =========================================================
-// PAGE CLOSE
+// CLEANUP
 // =========================================================
 
 window.addEventListener(
