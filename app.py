@@ -627,6 +627,10 @@ def live_detect():
 
         conf=0.35,
 
+        classes=[0, 1, 2, 3, 5, 7, 67],
+
+        max_det=20,
+
         verbose=False
 
     )

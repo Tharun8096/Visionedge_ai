@@ -2,13 +2,8 @@
 <html lang="en">
 
 <head>
-
     <meta charset="UTF-8">
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>VisionEdge AI</title>
 
@@ -16,93 +11,58 @@
         rel="stylesheet"
         href="{{ url_for('static', filename='style.css') }}"
     >
-
 </head>
-
 
 <body>
 
-
-    <!-- =====================================================
-         HEADER
-    ====================================================== -->
+    <!-- ================= HEADER ================= -->
 
     <header class="header">
 
         <div class="logo">
 
-            <span class="logo-icon">
-                ◉
-            </span>
+            <span class="logo-icon">◉</span>
 
             <div>
-
-                <h1>
-                    VisionEdge AI
-                </h1>
-
-                <p>
-                    Smart Object Detection
-                </p>
-
+                <h1>VisionEdge AI</h1>
+                <p>Smart Object Detection</p>
             </div>
 
         </div>
 
-
         <div class="system-status">
-
             <span class="status-dot"></span>
-
-            <span>
-                System Ready
-            </span>
-
+            <span>System Ready</span>
         </div>
 
     </header>
 
 
-
-    <!-- =====================================================
-         MAIN DASHBOARD
-    ====================================================== -->
+    <!-- ================= MAIN DASHBOARD ================= -->
 
     <main class="dashboard">
 
-
-        <!-- =================================================
-             WELCOME
-        ================================================== -->
+        <!-- ================= WELCOME ================= -->
 
         <section class="welcome">
 
             <div>
-
-                <h2>
-                    Object Detection Dashboard
-                </h2>
+                <h2>Object Detection Dashboard</h2>
 
                 <p>
                     Detect and analyze objects from videos using
                     YOLO and computer vision.
                 </p>
-
             </div>
 
         </section>
 
 
-
-        <!-- =================================================
-             VIDEO INPUT
-        ================================================== -->
+        <!-- ================= VIDEO INPUT ================= -->
 
         <section class="upload-card">
 
-            <h3>
-                📹 Video Input
-            </h3>
+            <h3>📹 Video Input</h3>
 
 
             <!-- MODE BUTTONS -->
@@ -129,10 +89,7 @@
             </div>
 
 
-
-            <!-- =================================================
-                 UPLOAD PANEL
-            ================================================== -->
+            <!-- ================= UPLOAD PANEL ================= -->
 
             <div
                 id="uploadPanel"
@@ -145,11 +102,9 @@
                         ⬆
                     </div>
 
-
                     <h4>
                         Select a video
                     </h4>
-
 
                     <p>
                         Upload a video file for YOLO object detection
@@ -176,10 +131,7 @@
             </div>
 
 
-
-            <!-- =================================================
-                 LIVE CAMERA PANEL
-            ================================================== -->
+            <!-- ================= LIVE CAMERA PANEL ================= -->
 
             <div
                 id="cameraPanel"
@@ -189,19 +141,16 @@
 
                 <div class="camera-area">
 
-
                     <h4>
                         📷 Live Camera
                     </h4>
-
 
                     <p>
                         Use your camera for live YOLO object detection
                     </p>
 
 
-
-                    <!-- Hidden camera source -->
+                    <!-- CAMERA SOURCE -->
 
                     <video
                         id="cameraVideo"
@@ -211,19 +160,16 @@
                     ></video>
 
 
-
-                    <!-- Main YOLO processed camera output -->
+                    <!-- PROCESSED CAMERA FRAME -->
 
                     <canvas
                         id="cameraCanvas"
                     ></canvas>
 
 
-
                     <!-- CAMERA BUTTONS -->
 
                     <div class="camera-buttons">
-
 
                         <button
                             id="startCameraBtn"
@@ -243,10 +189,10 @@
                             ⏹ Stop Camera
                         </button>
 
-
                     </div>
 
 
+                    <!-- CAMERA STATUS -->
 
                     <p
                         id="cameraMessage"
@@ -255,7 +201,6 @@
                         Camera is stopped
                     </p>
 
-
                 </div>
 
             </div>
@@ -263,22 +208,14 @@
         </section>
 
 
-
-        <!-- =================================================
-             DETECTION STATISTICS
-        ================================================== -->
+        <!-- ================= DETECTION STATISTICS ================= -->
 
         <section class="stats-section">
 
-
-            <h3>
-                📊 Detection Statistics
-            </h3>
-
+            <h3>📊 Detection Statistics</h3>
 
 
             <div class="stats-grid">
-
 
                 <!-- PERSONS -->
 
@@ -288,12 +225,9 @@
                         👤
                     </span>
 
-
                     <div>
 
-                        <p>
-                            Persons
-                        </p>
+                        <p>Persons</p>
 
                         <h2 id="persons">
                             0
@@ -304,7 +238,6 @@
                 </div>
 
 
-
                 <!-- PHONES -->
 
                 <div class="stat-card phone">
@@ -313,12 +246,9 @@
                         📱
                     </span>
 
-
                     <div>
 
-                        <p>
-                            Phones
-                        </p>
+                        <p>Phones</p>
 
                         <h2 id="phones">
                             0
@@ -329,7 +259,6 @@
                 </div>
 
 
-
                 <!-- CARS -->
 
                 <div class="stat-card car">
@@ -338,12 +267,9 @@
                         🚗
                     </span>
 
-
                     <div>
 
-                        <p>
-                            Cars
-                        </p>
+                        <p>Cars</p>
 
                         <h2 id="cars">
                             0
@@ -354,7 +280,6 @@
                 </div>
 
 
-
                 <!-- BUSES -->
 
                 <div class="stat-card bus">
@@ -363,12 +288,9 @@
                         🚌
                     </span>
 
-
                     <div>
 
-                        <p>
-                            Buses
-                        </p>
+                        <p>Buses</p>
 
                         <h2 id="buses">
                             0
@@ -379,7 +301,6 @@
                 </div>
 
 
-
                 <!-- TRUCKS -->
 
                 <div class="stat-card truck">
@@ -388,12 +309,9 @@
                         🚚
                     </span>
 
-
                     <div>
 
-                        <p>
-                            Trucks
-                        </p>
+                        <p>Trucks</p>
 
                         <h2 id="trucks">
                             0
@@ -404,7 +322,6 @@
                 </div>
 
 
-
                 <!-- MOTORCYCLES -->
 
                 <div class="stat-card motorcycle">
@@ -413,12 +330,9 @@
                         🏍️
                     </span>
 
-
                     <div>
 
-                        <p>
-                            Motorcycles
-                        </p>
+                        <p>Motorcycles</p>
 
                         <h2 id="motorcycles">
                             0
@@ -428,16 +342,12 @@
 
                 </div>
 
-
             </div>
 
         </section>
 
 
-
-        <!-- =================================================
-             PERFORMANCE + STATUS
-        ================================================== -->
+        <!-- ================= PERFORMANCE + STATUS ================= -->
 
         <section class="info-grid">
 
@@ -445,7 +355,6 @@
             <!-- PERFORMANCE -->
 
             <div class="info-card">
-
 
                 <h3>
                     ⚡ Performance
@@ -477,15 +386,12 @@
 
                 </div>
 
-
             </div>
-
 
 
             <!-- DETECTION STATUS -->
 
             <div class="info-card">
-
 
                 <h3>
                     🎯 Detection Status
@@ -507,69 +413,46 @@
                     No detection yet
                 </p>
 
-
             </div>
-
 
         </section>
 
 
-
-        <!-- =================================================
-             DETECTION OUTPUT
-        ================================================== -->
+        <!-- ================= DETECTION OUTPUT ================= -->
 
         <section class="video-section">
-
 
             <h3>
                 🎬 Detection Output
             </h3>
 
 
-
             <div class="video-container">
 
 
-                <!-- =================================================
-                     DEFAULT PLACEHOLDER
-                ================================================== -->
+                <!-- DEFAULT PLACEHOLDER -->
 
                 <div id="videoPlaceholder">
-
 
                     <div class="big-video-icon">
                         ▶
                     </div>
 
-
                     <p>
                         Detection output will appear here
                     </p>
 
-
                 </div>
 
 
-
-                <!-- =================================================
-                     LIVE CAMERA YOLO OUTPUT
-
-                     JavaScript will copy the processed
-                     camera frame into this canvas.
-                ================================================== -->
+                <!-- LIVE CAMERA OUTPUT -->
 
                 <canvas
                     id="liveOutputCanvas"
                 ></canvas>
 
 
-
-                <!-- =================================================
-                     UPLOADED VIDEO YOLO OUTPUT
-
-                     Used when Upload Video mode is selected.
-                ================================================== -->
+                <!-- UPLOADED VIDEO OUTPUT -->
 
                 <video
                     id="outputVideo"
@@ -581,17 +464,52 @@
 
             </div>
 
-
         </section>
 
+
+        <!-- ================= FINAL SYSTEM INFORMATION ================= -->
+
+        <section class="info-grid">
+
+            <div class="info-card">
+
+                <h3>🤖 AI Model</h3>
+
+                <div class="info-row">
+                    <span>Model</span>
+                    <strong>YOLOv8</strong>
+                </div>
+
+                <div class="info-row">
+                    <span>Framework</span>
+                    <strong>OpenCV</strong>
+                </div>
+
+            </div>
+
+
+            <div class="info-card">
+
+                <h3>⚙️ System</h3>
+
+                <div class="info-row">
+                    <span>Backend</span>
+                    <strong>Flask</strong>
+                </div>
+
+                <div class="info-row">
+                    <span>Status</span>
+                    <strong>READY</strong>
+                </div>
+
+            </div>
+
+        </section>
 
     </main>
 
 
-
-    <!-- =====================================================
-         FOOTER
-    ====================================================== -->
+    <!-- ================= FOOTER ================= -->
 
     <footer>
 
@@ -603,15 +521,11 @@
     </footer>
 
 
-
-    <!-- =====================================================
-         JAVASCRIPT
-    ====================================================== -->
+    <!-- ================= JAVASCRIPT ================= -->
 
     <script
         src="{{ url_for('static', filename='script.js') }}"
     ></script>
-
 
 </body>
 
