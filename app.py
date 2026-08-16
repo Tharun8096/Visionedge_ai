@@ -8,12 +8,9 @@ from flask import (
 )
 
 from werkzeug.utils import secure_filename
-
 from ultralytics import YOLO
 
 import os
-import subprocess
-import sys
 import json
 import cv2
 import numpy as np
@@ -27,110 +24,83 @@ import time
 
 app = Flask(__name__)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# =========================================================
-# PROJECT PATH
-# =========================================================
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "input_videos")
+OUTPUT_FOLDER = os.path.join(BASE_DIR, "output")
 
-BASE_DIR = os.path.dirname(
-    os.path.abspath(__file__)
-)
-
-
-# =========================================================
-# FOLDERS
-# =========================================================
-
-UPLOAD_FOLDER = os.path.join(
-    BASE_DIR,
-    "input_videos"
-)
-
-OUTPUT_FOLDER = os.path.join(
-    BASE_DIR,
-    "output"
-)
-
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-
-
-os.makedirs(
-    UPLOAD_FOLDER,
-    exist_ok=True
-)
-
-os.makedirs(
-    OUTPUT_FOLDER,
-    exist_ok=True
-)
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 
 
 # =========================================================
 # YOLO MODEL
 # =========================================================
 
-MODEL_PATH = os.path.join(
-    BASE_DIR,
-    "yolov8n.pt"
-)
+MODEL_PATH = os.path.join(BASE_DIR, "yolov8n.pt")
 
-
-live_model = None
-
-
-def get_live_model():
-
-    global live_model
-
-    if live_model is None:
-
-        print("")
-        print("========================================")
-        print("Loading YOLO model for LIVE CAMERA...")
-        print("========================================")
-
-        live_model = YOLO(
-            MODEL_PATH
-        )
-
-        print(
-            "Live YOLO model loaded successfully."
-        )
-
-    return live_model
-
-
-# =========================================================
-# LIVE FPS
-# =========================================================
-
+model = None
 last_live_time = None
-
 live_fps = 0.0
 
 
+def get_model():
+    global model
+
+    if model is None:
+        print("Loading YOLO model...")
+        model = YOLO(MODEL_PATH)
+        print("YOLO model loaded.")
+
+    return model
+
+
 # =========================================================
-# HOME PAGE
+# DEFAULT STATISTICS
+# =========================================================
+
+def default_stats():
+    return {
+        "persons": 0,
+        "phones": 0,
+        "cars": 0,
+        "buses": 0,
+        "trucks": 0,
+        "motorcycles": 0,
+        "bicycles": 0,
+        "total_objects": 0,
+        "fps": 0
+    }
+
+
+def save_stats(stats):
+    path = os.path.join(OUTPUT_FOLDER, "stats.json")
+
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(stats, f)
+    except Exception as e:
+        print("Could not save stats:", e)
+
+
+# =========================================================
+# HOME
 # =========================================================
 
 @app.route("/")
 def home():
-
-    return render_template(
-        "index.html"
-    )
+    return render_template("index.html")
 
 
 # =========================================================
-# SERVE OUTPUT FILES
+# OUTPUT FILE
 # =========================================================
 
-@app.route(
-    "/output/<path:filename>"
-)
+@app.route("/output/<path:filename>")
 def output_file(filename):
-
     return send_from_directory(
         OUTPUT_FOLDER,
         filename
@@ -138,7 +108,7 @@ def output_file(filename):
 
 
 # =========================================================
-# GET STATISTICS
+# STATISTICS
 # =========================================================
 
 @app.route("/stats")
@@ -149,66 +119,129 @@ def get_stats():
         "stats.json"
     )
 
-
-    default_stats = {
-
-        "persons": 0,
-
-        "phones": 0,
-
-        "cars": 0,
-
-        "buses": 0,
-
-        "trucks": 0,
-
-        "motorcycles": 0,
-
-        "bicycles": 0,
-
-        "total_objects": 0,
-
-        "fps": 0
-
-    }
-
-
-    if not os.path.exists(
-        stats_path
-    ):
-
-        return jsonify(
-            default_stats
-        )
-
+    if not os.path.exists(stats_path):
+        return jsonify(default_stats())
 
     try:
-
         with open(
             stats_path,
             "r",
             encoding="utf-8"
         ) as f:
-
             stats = json.load(f)
 
-
-        return jsonify(
-            stats
-        )
-
+        return jsonify(stats)
 
     except Exception as e:
+        print("Stats error:", e)
+        return jsonify(default_stats())
 
-        print(
-            "Stats error:",
-            e
+
+# =========================================================
+# OBJECT DETECTION HELPER
+# =========================================================
+
+def detect_frame(frame, yolo_model):
+
+    results = yolo_model.predict(
+        source=frame,
+        conf=0.35,
+        classes=[0, 1, 2, 3, 5, 7, 67],
+        max_det=20,
+        imgsz=416,
+        verbose=False
+    )
+
+    result = results[0]
+
+    stats = {
+        "persons": 0,
+        "phones": 0,
+        "cars": 0,
+        "buses": 0,
+        "trucks": 0,
+        "motorcycles": 0,
+        "bicycles": 0,
+        "total_objects": 0
+    }
+
+    if result.boxes is None:
+        return frame, stats
+
+    for box in result.boxes:
+
+        cls = int(box.cls[0])
+        confidence = float(box.conf[0])
+
+        if cls == 0:
+            name = "person"
+            color = (0, 255, 0)
+            stats["persons"] += 1
+
+        elif cls == 67:
+            name = "cell phone"
+            color = (0, 255, 255)
+            stats["phones"] += 1
+
+        elif cls == 2:
+            name = "car"
+            color = (255, 0, 0)
+            stats["cars"] += 1
+
+        elif cls == 5:
+            name = "bus"
+            color = (0, 0, 255)
+            stats["buses"] += 1
+
+        elif cls == 7:
+            name = "truck"
+            color = (255, 0, 255)
+            stats["trucks"] += 1
+
+        elif cls == 3:
+            name = "motorcycle"
+            color = (0, 165, 255)
+            stats["motorcycles"] += 1
+
+        elif cls == 1:
+            name = "bicycle"
+            color = (255, 255, 255)
+            stats["bicycles"] += 1
+
+        else:
+            continue
+
+        stats["total_objects"] += 1
+
+        x1, y1, x2, y2 = map(
+            int,
+            box.xyxy[0]
         )
 
+        label = f"{name} {confidence:.2f}"
 
-        return jsonify(
-            default_stats
+        cv2.rectangle(
+            frame,
+            (x1, y1),
+            (x2, y2),
+            color,
+            2
         )
+
+        cv2.putText(
+            frame,
+            label,
+            (
+                x1,
+                max(y1 - 10, 20)
+            ),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            color,
+            2
+        )
+
+    return frame, stats
 
 
 # =========================================================
@@ -221,312 +254,371 @@ def get_stats():
 )
 def detect():
 
-    # -----------------------------------------------------
-    # CHECK VIDEO
-    # -----------------------------------------------------
+    print("Received video detection request.")
 
     if "video" not in request.files:
-
         return jsonify({
-
             "success": False,
+            "message": "No video uploaded"
+        }), 400
 
-            "message":
-                "No video uploaded"
-
-        })
-
-
-    video = request.files[
-        "video"
-    ]
-
+    video = request.files["video"]
 
     if video.filename == "":
-
         return jsonify({
-
             "success": False,
+            "message": "Please select a video"
+        }), 400
 
-            "message":
-                "Please select a video"
+    filename = secure_filename(video.filename)
 
-        })
-
-
-    # -----------------------------------------------------
-    # SAVE VIDEO
-    # -----------------------------------------------------
-
-    filename = secure_filename(
-        video.filename
-    )
-
+    if not filename:
+        return jsonify({
+            "success": False,
+            "message": "Invalid video filename"
+        }), 400
 
     input_path = os.path.join(
         UPLOAD_FOLDER,
         filename
     )
 
+    video.save(input_path)
 
-    video.save(
-        input_path
-    )
-
-
-    print("")
-    print(
-        "Uploaded video:",
-        input_path
-    )
-
-
-    # -----------------------------------------------------
-    # OUTPUT FILES
-    # -----------------------------------------------------
-
-    stats_path = os.path.join(
-        OUTPUT_FOLDER,
-        "stats.json"
-    )
-
+    print("Video saved:", input_path)
 
     output_video = os.path.join(
         OUTPUT_FOLDER,
         "output.mp4"
     )
 
-
-    temp_video = os.path.join(
+    stats_path = os.path.join(
         OUTPUT_FOLDER,
-        "output_temp.mp4"
+        "stats.json"
     )
 
+    # Remove previous output
+    for old_file in [output_video, stats_path]:
 
-    # -----------------------------------------------------
-    # DELETE OLD FILES
-    # -----------------------------------------------------
-
-    for old_file in [
-
-        stats_path,
-
-        output_video,
-
-        temp_video
-
-    ]:
-
-        if os.path.exists(
-            old_file
-        ):
+        if os.path.exists(old_file):
 
             try:
-
-                os.remove(
-                    old_file
-                )
-
+                os.remove(old_file)
             except Exception as e:
+                print("Could not remove:", e)
 
-                print(
-                    "Could not delete:",
-                    old_file,
-                    e
-                )
-
-
-    # =====================================================
-    # RUN YOLO
-    # =====================================================
+    cap = None
+    writer = None
 
     try:
 
-        print("")
-        print(
-            "========================================"
-        )
+        # -----------------------------------------------------
+        # LOAD MODEL
+        # -----------------------------------------------------
 
-        print(
-            "Starting YOLO video detection..."
-        )
+        yolo_model = get_model()
 
-        print(
-            "========================================"
-        )
+        # -----------------------------------------------------
+        # OPEN VIDEO
+        # -----------------------------------------------------
 
+        cap = cv2.VideoCapture(input_path)
 
-        yolo_path = os.path.join(
-            BASE_DIR,
-            "yolo.py"
-        )
-
-
-        subprocess.run(
-
-            [
-
-                sys.executable,
-
-                yolo_path,
-
-                input_path
-
-            ],
-
-            check=True
-
-        )
-
-
-        print(
-            "YOLO finished successfully."
-        )
-
-
-        # =================================================
-        # CHECK STATS
-        # =================================================
-
-        if not os.path.exists(
-            stats_path
-        ):
-
+        if not cap.isOpened():
             return jsonify({
-
                 "success": False,
+                "message": "Could not open uploaded video"
+            }), 400
 
-                "message":
-                    "YOLO finished but stats.json was not created."
+        original_width = int(
+            cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+        )
 
-            })
+        original_height = int(
+            cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+        )
 
+        input_fps = cap.get(
+            cv2.CAP_PROP_FPS
+        )
 
-        # =================================================
-        # CHECK OUTPUT VIDEO
-        # =================================================
+        if input_fps <= 0:
+            input_fps = 20
 
-        if not os.path.exists(
-            output_video
-        ):
+        total_frames = int(
+            cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        )
 
-            return jsonify({
+        print(
+            "Video:",
+            original_width,
+            "x",
+            original_height,
+            "FPS:",
+            input_fps,
+            "Frames:",
+            total_frames
+        )
 
-                "success": False,
+        # -----------------------------------------------------
+        # RESIZE VIDEO
+        # -----------------------------------------------------
 
-                "message":
-                    "YOLO finished but output.mp4 was not created."
+        max_width = 640
 
-            })
+        if original_width > max_width:
 
+            scale = max_width / original_width
 
-        # =================================================
-        # READ STATISTICS
-        # =================================================
-
-        with open(
-
-            stats_path,
-
-            "r",
-
-            encoding="utf-8"
-
-        ) as f:
-
-            stats = json.load(
-                f
+            output_width = max_width
+            output_height = int(
+                original_height * scale
             )
 
+        else:
 
-        print("")
-        print(
-            "========================================"
+            output_width = original_width
+            output_height = original_height
+
+        # Make dimensions even
+        output_width -= output_width % 2
+        output_height -= output_height % 2
+
+        # -----------------------------------------------------
+        # VIDEO WRITER
+        # -----------------------------------------------------
+
+        fourcc = cv2.VideoWriter_fourcc(
+            *"mp4v"
         )
 
-        print(
-            "FINAL STATISTICS"
+        writer = cv2.VideoWriter(
+            output_video,
+            fourcc,
+            input_fps,
+            (
+                output_width,
+                output_height
+            )
         )
 
-        print(
-            "========================================"
+        if not writer.isOpened():
+            return jsonify({
+                "success": False,
+                "message": "Could not create output video"
+            }), 500
+
+        # -----------------------------------------------------
+        # STATISTICS
+        # -----------------------------------------------------
+
+        final_stats = default_stats()
+
+        processed_frames = 0
+        start_time = time.time()
+
+        # Process every frame.
+        # YOLO itself receives a small 640px frame.
+        while True:
+
+            ret, frame = cap.read()
+
+            if not ret:
+                break
+
+            # Resize to reduce RAM/CPU usage
+            if (
+                frame.shape[1] != output_width
+                or frame.shape[0] != output_height
+            ):
+                frame = cv2.resize(
+                    frame,
+                    (
+                        output_width,
+                        output_height
+                    ),
+                    interpolation=cv2.INTER_AREA
+                )
+
+            # -------------------------------------------------
+            # YOLO
+            # -------------------------------------------------
+
+            processed_frame, frame_stats = detect_frame(
+                frame,
+                yolo_model
+            )
+
+            # -------------------------------------------------
+            # UPDATE STATISTICS
+            # -------------------------------------------------
+
+            final_stats["persons"] = max(
+                final_stats["persons"],
+                frame_stats["persons"]
+            )
+
+            final_stats["phones"] = max(
+                final_stats["phones"],
+                frame_stats["phones"]
+            )
+
+            final_stats["cars"] = max(
+                final_stats["cars"],
+                frame_stats["cars"]
+            )
+
+            final_stats["buses"] = max(
+                final_stats["buses"],
+                frame_stats["buses"]
+            )
+
+            final_stats["trucks"] = max(
+                final_stats["trucks"],
+                frame_stats["trucks"]
+            )
+
+            final_stats["motorcycles"] = max(
+                final_stats["motorcycles"],
+                frame_stats["motorcycles"]
+            )
+
+            final_stats["bicycles"] = max(
+                final_stats["bicycles"],
+                frame_stats["bicycles"]
+            )
+
+            final_stats["total_objects"] = max(
+                final_stats["total_objects"],
+                frame_stats["total_objects"]
+            )
+
+            processed_frames += 1
+
+            # -------------------------------------------------
+            # WRITE FRAME
+            # -------------------------------------------------
+
+            writer.write(processed_frame)
+
+            # Release reference
+            del processed_frame
+            del frame
+
+            # Progress log
+            if processed_frames % 30 == 0:
+
+                elapsed = time.time() - start_time
+
+                current_fps = (
+                    processed_frames / elapsed
+                    if elapsed > 0
+                    else 0
+                )
+
+                print(
+                    f"Processed {processed_frames} frames | "
+                    f"FPS: {current_fps:.2f}"
+                )
+
+        # -----------------------------------------------------
+        # CLEANUP
+        # -----------------------------------------------------
+
+        cap.release()
+        cap = None
+
+        writer.release()
+        writer = None
+
+        elapsed = time.time() - start_time
+
+        final_stats["fps"] = round(
+            processed_frames / elapsed,
+            2
+        ) if elapsed > 0 else 0
+
+        save_stats(final_stats)
+
+        print("Detection completed.")
+        print("Output:", output_video)
+        print("Stats:", final_stats)
+
+        # -----------------------------------------------------
+        # CHECK OUTPUT
+        # -----------------------------------------------------
+
+        if not os.path.exists(output_video):
+
+            return jsonify({
+                "success": False,
+                "message": "Output video was not created"
+            }), 500
+
+        output_size = os.path.getsize(
+            output_video
         )
 
-        print(
-            stats
-        )
+        if output_size == 0:
 
-        print(
-            "========================================"
-        )
+            return jsonify({
+                "success": False,
+                "message": "Output video is empty"
+            }), 500
 
+        # -----------------------------------------------------
+        # DELETE INPUT VIDEO
+        # -----------------------------------------------------
 
-        # =================================================
-        # RETURN DATA
-        # =================================================
+        try:
+            os.remove(input_path)
+        except Exception:
+            pass
 
         return jsonify({
 
             "success": True,
 
             "message":
-                "Detection completed",
+                "Detection completed successfully",
 
             "output":
                 "/output/output.mp4",
 
             "stats":
-                stats
+                final_stats
 
         })
-
-
-    except subprocess.CalledProcessError as e:
-
-        print("")
-        print(
-            "YOLO ERROR:"
-        )
-
-        print(
-            e
-        )
-
-
-        return jsonify({
-
-            "success": False,
-
-            "message":
-                "YOLO detection failed. Check terminal."
-
-        })
-
 
     except Exception as e:
 
-        print("")
-        print(
-            "APPLICATION ERROR:"
-        )
+        print("DETECTION ERROR:")
+        print(e)
 
-        print(
-            e
-        )
+        if cap is not None:
+            try:
+                cap.release()
+            except Exception:
+                pass
 
+        if writer is not None:
+            try:
+                writer.release()
+            except Exception:
+                pass
 
         return jsonify({
 
             "success": False,
 
             "message":
-                str(e)
+                "Detection failed: " + str(e)
 
-        })
+        }), 500
 
 
 # =========================================================
-# LIVE CAMERA YOLO DETECTION
+# LIVE CAMERA DETECTION
 # =========================================================
 
 @app.route(
@@ -538,650 +630,281 @@ def live_detect():
     global last_live_time
     global live_fps
 
-
     start_time = time.perf_counter()
-
-
-    # -----------------------------------------------------
-    # CHECK FRAME
-    # -----------------------------------------------------
 
     if "frame" not in request.files:
 
         return jsonify({
-
             "success": False,
-
-            "message":
-                "No camera frame received"
-
+            "message": "No camera frame received"
         }), 400
 
-
-    frame_file = request.files[
-        "frame"
-    ]
-
-
-    # -----------------------------------------------------
-    # READ IMAGE
-    # -----------------------------------------------------
+    frame_file = request.files["frame"]
 
     image_bytes = frame_file.read()
-
 
     if not image_bytes:
 
         return jsonify({
-
             "success": False,
-
-            "message":
-                "Empty camera frame"
-
+            "message": "Empty camera frame"
         }), 400
-
-
-    # -----------------------------------------------------
-    # CONVERT JPEG TO OPENCV IMAGE
-    # -----------------------------------------------------
 
     np_array = np.frombuffer(
         image_bytes,
         dtype=np.uint8
     )
 
-
     frame = cv2.imdecode(
         np_array,
         cv2.IMREAD_COLOR
     )
 
-
     if frame is None:
 
         return jsonify({
-
             "success": False,
-
             "message":
                 "Could not decode camera frame"
-
         }), 400
 
+    try:
 
-    # -----------------------------------------------------
-    # LOAD MODEL
-    # -----------------------------------------------------
+        # -----------------------------------------------------
+        # REDUCE CAMERA FRAME SIZE
+        # -----------------------------------------------------
 
-    model = get_live_model()
+        max_width = 640
 
+        if frame.shape[1] > max_width:
 
-    # -----------------------------------------------------
-    # YOLO DETECTION
-    # -----------------------------------------------------
+            scale = max_width / frame.shape[1]
 
-    results = model.predict(
-
-        source=frame,
-
-        conf=0.35,
-
-        classes=[0, 1, 2, 3, 5, 7, 67],
-
-        max_det=20,
-
-        verbose=False
-
-    )
-
-
-    result = results[0]
-
-
-    # -----------------------------------------------------
-    # COUNTERS
-    # -----------------------------------------------------
-
-    person_count = 0
-
-    phone_count = 0
-
-    car_count = 0
-
-    bus_count = 0
-
-    truck_count = 0
-
-    motorcycle_count = 0
-
-    total_objects = 0
-
-
-    # -----------------------------------------------------
-    # DETECTION
-    # -----------------------------------------------------
-
-    if result.boxes is not None:
-
-        for box in result.boxes:
-
-            cls = int(
-                box.cls[0]
+            new_width = max_width
+            new_height = int(
+                frame.shape[0] * scale
             )
 
-
-            confidence = float(
-                box.conf[0]
-            )
-
-
-            # =============================================
-            # PERSON
-            # =============================================
-
-            if cls == 0:
-
-                person_count += 1
-
-                object_name = "person"
-
-                color = (
-                    0,
-                    255,
-                    0
-                )
-
-
-            # =============================================
-            # PHONE
-            # =============================================
-
-            elif cls == 67:
-
-                phone_count += 1
-
-                object_name = "cell phone"
-
-                color = (
-                    0,
-                    255,
-                    255
-                )
-
-
-            # =============================================
-            # CAR
-            # =============================================
-
-            elif cls == 2:
-
-                car_count += 1
-
-                object_name = "car"
-
-                color = (
-                    255,
-                    0,
-                    0
-                )
-
-
-            # =============================================
-            # BUS
-            # =============================================
-
-            elif cls == 5:
-
-                bus_count += 1
-
-                object_name = "bus"
-
-                color = (
-                    0,
-                    0,
-                    255
-                )
-
-
-            # =============================================
-            # TRUCK
-            # =============================================
-
-            elif cls == 7:
-
-                truck_count += 1
-
-                object_name = "truck"
-
-                color = (
-                    255,
-                    0,
-                    255
-                )
-
-
-            # =============================================
-            # MOTORCYCLE
-            # =============================================
-
-            elif cls == 3:
-
-                motorcycle_count += 1
-
-                object_name = "motorcycle"
-
-                color = (
-                    0,
-                    165,
-                    255
-                )
-
-
-            # =============================================
-            # BICYCLE
-            # =============================================
-
-            elif cls == 1:
-
-                object_name = "bicycle"
-
-                color = (
-                    255,
-                    255,
-                    255
-                )
-
-
-            # =============================================
-            # OTHER OBJECTS
-            # =============================================
-
-            else:
-
-                continue
-
-
-            total_objects += 1
-
-
-            # -------------------------------------------------
-            # BOUNDING BOX
-            # -------------------------------------------------
-
-            x1, y1, x2, y2 = map(
-
-                int,
-
-                box.xyxy[0]
-
-            )
-
-
-            # -------------------------------------------------
-            # LABEL
-            # -------------------------------------------------
-
-            label = (
-
-                f"{object_name} "
-
-                f"{confidence:.2f}"
-
-            )
-
-
-            # -------------------------------------------------
-            # DRAW BOX
-            # -------------------------------------------------
-
-            cv2.rectangle(
-
+            frame = cv2.resize(
                 frame,
-
-                (x1, y1),
-
-                (x2, y2),
-
-                color,
-
-                2
-
+                (new_width, new_height),
+                interpolation=cv2.INTER_AREA
             )
 
+        # -----------------------------------------------------
+        # YOLO
+        # -----------------------------------------------------
 
-            # -------------------------------------------------
-            # DRAW LABEL
-            # -------------------------------------------------
+        yolo_model = get_model()
 
-            cv2.putText(
+        processed_frame, stats = detect_frame(
+            frame,
+            yolo_model
+        )
 
-                frame,
+        frame = processed_frame
 
-                label,
+        # -----------------------------------------------------
+        # FPS
+        # -----------------------------------------------------
 
-                (
-                    x1,
-                    max(
-                        y1 - 10,
-                        20
+        current_time = time.perf_counter()
+
+        if last_live_time is not None:
+
+            delta = (
+                current_time -
+                last_live_time
+            )
+
+            if delta > 0:
+
+                instant_fps = 1.0 / delta
+
+                if live_fps <= 0:
+
+                    live_fps = instant_fps
+
+                else:
+
+                    live_fps = (
+                        0.8 * live_fps
+                        +
+                        0.2 * instant_fps
                     )
+
+        last_live_time = current_time
+
+        display_fps = int(
+            max(0, live_fps)
+        )
+
+        # -----------------------------------------------------
+        # CAMERA DASHBOARD
+        # -----------------------------------------------------
+
+        cv2.rectangle(
+            frame,
+            (10, 10),
+            (280, 175),
+            (0, 0, 0),
+            -1
+        )
+
+        cv2.putText(
+            frame,
+            "VisionEdge AI",
+            (20, 35),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"FPS: {display_fps}",
+            (20, 65),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Persons: {stats['persons']}",
+            (20, 90),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            (0, 255, 0),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Cars: {stats['cars']}",
+            (20, 115),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            (255, 0, 0),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Phones: {stats['phones']}",
+            (20, 140),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            (0, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Total: {stats['total_objects']}",
+            (20, 165),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            (255, 255, 255),
+            2
+        )
+
+        # -----------------------------------------------------
+        # JPEG
+        # -----------------------------------------------------
+
+        success, encoded_image = cv2.imencode(
+            ".jpg",
+            frame,
+            [
+                int(
+                    cv2.IMWRITE_JPEG_QUALITY
                 ),
-
-                cv2.FONT_HERSHEY_SIMPLEX,
-
-                0.6,
-
-                color,
-
-                2
-
-            )
-
-
-    # =====================================================
-    # CALCULATE FPS
-    # =====================================================
-
-    current_time = time.perf_counter()
-
-
-    if last_live_time is not None:
-
-        delta = (
-            current_time -
-            last_live_time
+                70
+            ]
         )
 
-
-        if delta > 0:
-
-            instant_fps = 1.0 / delta
-
-
-            if live_fps <= 0:
-
-                live_fps = instant_fps
-
-            else:
-
-                live_fps = (
-
-                    0.8 * live_fps
-
-                    +
-
-                    0.2 * instant_fps
-
-                )
-
-
-    last_live_time = current_time
-
-
-    display_fps = int(
-        max(
-            0,
-            live_fps
-        )
-    )
-
-
-    # =====================================================
-    # DRAW DASHBOARD ON CAMERA
-    # =====================================================
-
-    cv2.rectangle(
-
-        frame,
-
-        (10, 10),
-
-        (270, 170),
-
-        (0, 0, 0),
-
-        -1
-
-    )
-
-
-    cv2.putText(
-
-        frame,
-
-        "VisionEdge AI",
-
-        (20, 35),
-
-        cv2.FONT_HERSHEY_SIMPLEX,
-
-        0.7,
-
-        (255, 255, 255),
-
-        2
-
-    )
-
-
-    cv2.putText(
-
-        frame,
-
-        f"FPS: {display_fps}",
-
-        (20, 65),
-
-        cv2.FONT_HERSHEY_SIMPLEX,
-
-        0.6,
-
-        (255, 255, 255),
-
-        2
-
-    )
-
-
-    cv2.putText(
-
-        frame,
-
-        f"Persons: {person_count}",
-
-        (20, 90),
-
-        cv2.FONT_HERSHEY_SIMPLEX,
-
-        0.55,
-
-        (0, 255, 0),
-
-        2
-
-    )
-
-
-    cv2.putText(
-
-        frame,
-
-        f"Cars: {car_count}",
-
-        (20, 115),
-
-        cv2.FONT_HERSHEY_SIMPLEX,
-
-        0.55,
-
-        (255, 0, 0),
-
-        2
-
-    )
-
-
-    cv2.putText(
-
-        frame,
-
-        f"Phones: {phone_count}",
-
-        (20, 140),
-
-        cv2.FONT_HERSHEY_SIMPLEX,
-
-        0.55,
-
-        (0, 255, 255),
-
-        2
-
-    )
-
-
-    cv2.putText(
-
-        frame,
-
-        f"Total: {total_objects}",
-
-        (20, 165),
-
-        cv2.FONT_HERSHEY_SIMPLEX,
-
-        0.55,
-
-        (255, 255, 255),
-
-        2
-
-    )
-
-
-    # =====================================================
-    # ENCODE IMAGE
-    # =====================================================
-
-    success, encoded_image = cv2.imencode(
-
-        ".jpg",
-
-        frame,
-
-        [
-            int(
-                cv2.IMWRITE_JPEG_QUALITY
+        if not success:
+
+            return jsonify({
+                "success": False,
+                "message":
+                    "Could not encode camera frame"
+            }), 500
+
+        response = send_file(
+            io.BytesIO(
+                encoded_image.tobytes()
             ),
-            80
-        ]
+            mimetype="image/jpeg"
+        )
 
-    )
+        # -----------------------------------------------------
+        # STATISTICS HEADERS
+        # -----------------------------------------------------
 
+        response.headers["X-Persons"] = str(
+            stats["persons"]
+        )
 
-    if not success:
+        response.headers["X-Phones"] = str(
+            stats["phones"]
+        )
+
+        response.headers["X-Cars"] = str(
+            stats["cars"]
+        )
+
+        response.headers["X-Buses"] = str(
+            stats["buses"]
+        )
+
+        response.headers["X-Trucks"] = str(
+            stats["trucks"]
+        )
+
+        response.headers["X-Motorcycles"] = str(
+            stats["motorcycles"]
+        )
+
+        response.headers["X-Total-Objects"] = str(
+            stats["total_objects"]
+        )
+
+        response.headers["X-FPS"] = str(
+            display_fps
+        )
+
+        return response
+
+    except Exception as e:
+
+        print("LIVE CAMERA ERROR:")
+        print(e)
 
         return jsonify({
-
             "success": False,
-
-            "message":
-                "Could not encode detection frame"
-
+            "message": str(e)
         }), 500
 
 
-    # =====================================================
-    # RETURN IMAGE
-    # =====================================================
-
-    response = send_file(
-
-        io.BytesIO(
-            encoded_image.tobytes()
-        ),
-
-        mimetype="image/jpeg"
-
-    )
-
-
-    # =====================================================
-    # SEND LIVE STATISTICS
-    # =====================================================
-
-    response.headers[
-        "X-Persons"
-    ] = str(
-        person_count
-    )
-
-
-    response.headers[
-        "X-Phones"
-    ] = str(
-        phone_count
-    )
-
-
-    response.headers[
-        "X-Cars"
-    ] = str(
-        car_count
-    )
-
-
-    response.headers[
-        "X-Buses"
-    ] = str(
-        bus_count
-    )
-
-
-    response.headers[
-        "X-Trucks"
-    ] = str(
-        truck_count
-    )
-
-
-    response.headers[
-        "X-Motorcycles"
-    ] = str(
-        motorcycle_count
-    )
-
-
-    response.headers[
-        "X-Total-Objects"
-    ] = str(
-        total_objects
-    )
-
-
-    response.headers[
-        "X-FPS"
-    ] = str(
-        display_fps
-    )
-
-
-    return response
-
-
 # =========================================================
-# START FLASK
+# START SERVER
 # =========================================================
 
 if __name__ == "__main__":
 
+    port = int(
+        os.environ.get(
+            "PORT",
+            5000
+        )
+    )
+
     app.run(
-
-        host="127.0.0.1",
-
-        port=5000,
-
-        debug=True
-
+        host="0.0.0.0",
+        port=port,
+        debug=False
     )
