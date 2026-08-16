@@ -16,6 +16,9 @@ import cv2
 import numpy as np
 import io
 import time
+import subprocess
+
+from imageio_ffmpeg import get_ffmpeg_exe
 
 
 # =========================================================
@@ -43,6 +46,7 @@ app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024
 MODEL_PATH = os.path.join(BASE_DIR, "yolov8n.pt")
 
 model = None
+
 last_live_time = None
 live_fps = 0.0
 
@@ -77,11 +81,19 @@ def default_stats():
 
 
 def save_stats(stats):
-    path = os.path.join(OUTPUT_FOLDER, "stats.json")
+    path = os.path.join(
+        OUTPUT_FOLDER,
+        "stats.json"
+    )
 
     try:
-        with open(path, "w", encoding="utf-8") as f:
+        with open(
+            path,
+            "w",
+            encoding="utf-8"
+        ) as f:
             json.dump(stats, f)
+
     except Exception as e:
         print("Could not save stats:", e)
 
@@ -128,12 +140,15 @@ def get_stats():
             "r",
             encoding="utf-8"
         ) as f:
+
             stats = json.load(f)
 
         return jsonify(stats)
 
     except Exception as e:
+
         print("Stats error:", e)
+
         return jsonify(default_stats())
 
 
@@ -146,7 +161,15 @@ def detect_frame(frame, yolo_model):
     results = yolo_model.predict(
         source=frame,
         conf=0.35,
-        classes=[0, 1, 2, 3, 5, 7, 67],
+        classes=[
+            0,   # person
+            1,   # bicycle
+            2,   # car
+            3,   # motorcycle
+            5,   # bus
+            7,   # truck
+            67   # cell phone
+        ],
         max_det=20,
         imgsz=416,
         verbose=False
@@ -174,38 +197,52 @@ def detect_frame(frame, yolo_model):
         confidence = float(box.conf[0])
 
         if cls == 0:
+
             name = "person"
             color = (0, 255, 0)
+
             stats["persons"] += 1
 
         elif cls == 67:
+
             name = "cell phone"
             color = (0, 255, 255)
+
             stats["phones"] += 1
 
         elif cls == 2:
+
             name = "car"
             color = (255, 0, 0)
+
             stats["cars"] += 1
 
         elif cls == 5:
+
             name = "bus"
             color = (0, 0, 255)
+
             stats["buses"] += 1
 
         elif cls == 7:
+
             name = "truck"
             color = (255, 0, 255)
+
             stats["trucks"] += 1
 
         elif cls == 3:
+
             name = "motorcycle"
             color = (0, 165, 255)
+
             stats["motorcycles"] += 1
 
         elif cls == 1:
+
             name = "bicycle"
             color = (255, 255, 255)
+
             stats["bicycles"] += 1
 
         else:
@@ -245,6 +282,132 @@ def detect_frame(frame, yolo_model):
 
 
 # =========================================================
+# CONVERT VIDEO FOR BROWSER
+# =========================================================
+
+def convert_video_for_browser(input_video, output_video):
+
+    print("Starting browser video conversion...")
+
+    try:
+
+        ffmpeg_exe = get_ffmpeg_exe()
+
+        temporary_output = os.path.join(
+            OUTPUT_FOLDER,
+            "browser_output.mp4"
+        )
+
+        if os.path.exists(temporary_output):
+
+            try:
+                os.remove(temporary_output)
+            except Exception:
+                pass
+
+        command = [
+            ffmpeg_exe,
+            "-y",
+            "-i",
+            input_video,
+
+            "-c:v",
+            "libx264",
+
+            "-preset",
+            "fast",
+
+            "-crf",
+            "23",
+
+            "-pix_fmt",
+            "yuv420p",
+
+            "-movflags",
+            "+faststart",
+
+            "-an",
+
+            temporary_output
+        ]
+
+        print("Running FFmpeg...")
+
+        result = subprocess.run(
+            command,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+
+        if result.returncode != 0:
+
+            print("FFmpeg ERROR:")
+            print(result.stderr)
+
+            return False
+
+        if not os.path.exists(temporary_output):
+
+            print("FFmpeg did not create output.")
+
+            return False
+
+        output_size = os.path.getsize(
+            temporary_output
+        )
+
+        if output_size <= 0:
+
+            print("Converted video is empty.")
+
+            return False
+
+        # Remove old output
+        if os.path.exists(output_video):
+
+            try:
+                os.remove(output_video)
+
+            except Exception as e:
+
+                print(
+                    "Could not remove old output:",
+                    e
+                )
+
+                return False
+
+        # Rename converted video
+        os.replace(
+            temporary_output,
+            output_video
+        )
+
+        print(
+            "Browser-compatible video created:",
+            output_video
+        )
+
+        print(
+            "Video size:",
+            os.path.getsize(output_video),
+            "bytes"
+        )
+
+        return True
+
+    except Exception as e:
+
+        print(
+            "Video conversion exception:",
+            e
+        )
+
+        return False
+
+
+# =========================================================
 # UPLOADED VIDEO DETECTION
 # =========================================================
 
@@ -254,9 +417,12 @@ def detect_frame(frame, yolo_model):
 )
 def detect():
 
-    print("Received video detection request.")
+    print(
+        "Received video detection request."
+    )
 
     if "video" not in request.files:
+
         return jsonify({
             "success": False,
             "message": "No video uploaded"
@@ -265,14 +431,18 @@ def detect():
     video = request.files["video"]
 
     if video.filename == "":
+
         return jsonify({
             "success": False,
             "message": "Please select a video"
         }), 400
 
-    filename = secure_filename(video.filename)
+    filename = secure_filename(
+        video.filename
+    )
 
     if not filename:
+
         return jsonify({
             "success": False,
             "message": "Invalid video filename"
@@ -285,7 +455,10 @@ def detect():
 
     video.save(input_path)
 
-    print("Video saved:", input_path)
+    print(
+        "Video saved:",
+        input_path
+    )
 
     output_video = os.path.join(
         OUTPUT_FOLDER,
@@ -297,45 +470,65 @@ def detect():
         "stats.json"
     )
 
-    # Remove previous output
-    for old_file in [output_video, stats_path]:
+    # -----------------------------------------------------
+    # REMOVE OLD OUTPUT
+    # -----------------------------------------------------
+
+    for old_file in [
+        output_video,
+        stats_path
+    ]:
 
         if os.path.exists(old_file):
 
             try:
+
                 os.remove(old_file)
+
             except Exception as e:
-                print("Could not remove:", e)
+
+                print(
+                    "Could not remove:",
+                    e
+                )
 
     cap = None
     writer = None
 
     try:
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # LOAD MODEL
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         yolo_model = get_model()
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # OPEN VIDEO
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
-        cap = cv2.VideoCapture(input_path)
+        cap = cv2.VideoCapture(
+            input_path
+        )
 
         if not cap.isOpened():
+
             return jsonify({
                 "success": False,
-                "message": "Could not open uploaded video"
+                "message":
+                    "Could not open uploaded video"
             }), 400
 
         original_width = int(
-            cap.get(cv2.CAP_PROP_FRAME_WIDTH)
+            cap.get(
+                cv2.CAP_PROP_FRAME_WIDTH
+            )
         )
 
         original_height = int(
-            cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            cap.get(
+                cv2.CAP_PROP_FRAME_HEIGHT
+            )
         )
 
         input_fps = cap.get(
@@ -346,7 +539,9 @@ def detect():
             input_fps = 20
 
         total_frames = int(
-            cap.get(cv2.CAP_PROP_FRAME_COUNT)
+            cap.get(
+                cv2.CAP_PROP_FRAME_COUNT
+            )
         )
 
         print(
@@ -360,19 +555,24 @@ def detect():
             total_frames
         )
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # RESIZE VIDEO
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         max_width = 640
 
         if original_width > max_width:
 
-            scale = max_width / original_width
+            scale = (
+                max_width /
+                original_width
+            )
 
             output_width = max_width
+
             output_height = int(
-                original_height * scale
+                original_height *
+                scale
             )
 
         else:
@@ -381,12 +581,30 @@ def detect():
             output_height = original_height
 
         # Make dimensions even
-        output_width -= output_width % 2
-        output_height -= output_height % 2
+        output_width -= (
+            output_width % 2
+        )
 
-        # -----------------------------------------------------
+        output_height -= (
+            output_height % 2
+        )
+
+        if output_width <= 0:
+            output_width = 640
+
+        if output_height <= 0:
+            output_height = 480
+
+        print(
+            "Output size:",
+            output_width,
+            "x",
+            output_height
+        )
+
+        # -------------------------------------------------
         # VIDEO WRITER
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         fourcc = cv2.VideoWriter_fourcc(
             *"mp4v"
@@ -403,22 +621,27 @@ def detect():
         )
 
         if not writer.isOpened():
+
             return jsonify({
                 "success": False,
-                "message": "Could not create output video"
+                "message":
+                    "Could not create output video"
             }), 500
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # STATISTICS
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         final_stats = default_stats()
 
         processed_frames = 0
+
         start_time = time.time()
 
-        # Process every frame.
-        # YOLO itself receives a small 640px frame.
+        # -------------------------------------------------
+        # PROCESS VIDEO
+        # -------------------------------------------------
+
         while True:
 
             ret, frame = cap.read()
@@ -426,11 +649,16 @@ def detect():
             if not ret:
                 break
 
-            # Resize to reduce RAM/CPU usage
+            # ---------------------------------------------
+            # RESIZE FRAME
+            # ---------------------------------------------
+
             if (
                 frame.shape[1] != output_width
-                or frame.shape[0] != output_height
+                or
+                frame.shape[0] != output_height
             ):
+
                 frame = cv2.resize(
                     frame,
                     (
@@ -440,18 +668,20 @@ def detect():
                     interpolation=cv2.INTER_AREA
                 )
 
-            # -------------------------------------------------
-            # YOLO
-            # -------------------------------------------------
+            # ---------------------------------------------
+            # YOLO DETECTION
+            # ---------------------------------------------
 
-            processed_frame, frame_stats = detect_frame(
-                frame,
-                yolo_model
+            processed_frame, frame_stats = (
+                detect_frame(
+                    frame,
+                    yolo_model
+                )
             )
 
-            # -------------------------------------------------
+            # ---------------------------------------------
             # UPDATE STATISTICS
-            # -------------------------------------------------
+            # ---------------------------------------------
 
             final_stats["persons"] = max(
                 final_stats["persons"],
@@ -495,35 +725,42 @@ def detect():
 
             processed_frames += 1
 
-            # -------------------------------------------------
+            # ---------------------------------------------
             # WRITE FRAME
-            # -------------------------------------------------
+            # ---------------------------------------------
 
-            writer.write(processed_frame)
+            writer.write(
+                processed_frame
+            )
 
-            # Release reference
-            del processed_frame
-            del frame
+            # ---------------------------------------------
+            # PROGRESS
+            # ---------------------------------------------
 
-            # Progress log
             if processed_frames % 30 == 0:
 
-                elapsed = time.time() - start_time
+                elapsed = (
+                    time.time() -
+                    start_time
+                )
 
                 current_fps = (
-                    processed_frames / elapsed
+                    processed_frames /
+                    elapsed
                     if elapsed > 0
                     else 0
                 )
 
                 print(
-                    f"Processed {processed_frames} frames | "
-                    f"FPS: {current_fps:.2f}"
+                    f"Processed "
+                    f"{processed_frames} frames | "
+                    f"FPS: "
+                    f"{current_fps:.2f}"
                 )
 
-        # -----------------------------------------------------
-        # CLEANUP
-        # -----------------------------------------------------
+        # -------------------------------------------------
+        # CLEANUP OPENCV
+        # -------------------------------------------------
 
         cap.release()
         cap = None
@@ -531,49 +768,160 @@ def detect():
         writer.release()
         writer = None
 
-        elapsed = time.time() - start_time
+        elapsed = (
+            time.time() -
+            start_time
+        )
 
-        final_stats["fps"] = round(
-            processed_frames / elapsed,
-            2
-        ) if elapsed > 0 else 0
+        if elapsed > 0:
 
-        save_stats(final_stats)
+            final_stats["fps"] = round(
+                processed_frames /
+                elapsed,
+                2
+            )
 
-        print("Detection completed.")
-        print("Output:", output_video)
-        print("Stats:", final_stats)
+        else:
 
-        # -----------------------------------------------------
-        # CHECK OUTPUT
-        # -----------------------------------------------------
+            final_stats["fps"] = 0
 
-        if not os.path.exists(output_video):
+        print(
+            "OpenCV output created:",
+            output_video
+        )
+
+        # -------------------------------------------------
+        # CHECK OPENCV OUTPUT
+        # -------------------------------------------------
+
+        if not os.path.exists(
+            output_video
+        ):
 
             return jsonify({
                 "success": False,
-                "message": "Output video was not created"
+                "message":
+                    "Output video was not created"
             }), 500
 
         output_size = os.path.getsize(
             output_video
         )
 
-        if output_size == 0:
+        if output_size <= 0:
 
             return jsonify({
                 "success": False,
-                "message": "Output video is empty"
+                "message":
+                    "Output video is empty"
             }), 500
 
-        # -----------------------------------------------------
+        print(
+            "Original output size:",
+            output_size,
+            "bytes"
+        )
+
+        # -------------------------------------------------
+        # CONVERT TO H.264
+        # -------------------------------------------------
+
+        conversion_success = (
+            convert_video_for_browser(
+                output_video,
+                output_video
+            )
+        )
+
+        if not conversion_success:
+
+            return jsonify({
+                "success": False,
+                "message":
+                    "Could not convert output video "
+                    "to browser-compatible format"
+            }), 500
+
+        # -------------------------------------------------
+        # FINAL OUTPUT CHECK
+        # -------------------------------------------------
+
+        if not os.path.exists(
+            output_video
+        ):
+
+            return jsonify({
+                "success": False,
+                "message":
+                    "Final output video missing"
+            }), 500
+
+        final_output_size = (
+            os.path.getsize(
+                output_video
+            )
+        )
+
+        if final_output_size <= 0:
+
+            return jsonify({
+                "success": False,
+                "message":
+                    "Final output video is empty"
+            }), 500
+
+        # -------------------------------------------------
+        # SAVE STATISTICS
+        # -------------------------------------------------
+
+        save_stats(
+            final_stats
+        )
+
+        print(
+            "Detection completed."
+        )
+
+        print(
+            "Output:",
+            output_video
+        )
+
+        print(
+            "Final output size:",
+            final_output_size,
+            "bytes"
+        )
+
+        print(
+            "Stats:",
+            final_stats
+        )
+
+        # -------------------------------------------------
         # DELETE INPUT VIDEO
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         try:
-            os.remove(input_path)
-        except Exception:
-            pass
+
+            if os.path.exists(
+                input_path
+            ):
+
+                os.remove(
+                    input_path
+                )
+
+        except Exception as e:
+
+            print(
+                "Could not delete input:",
+                e
+            )
+
+        # -------------------------------------------------
+        # RESPONSE
+        # -------------------------------------------------
 
         return jsonify({
 
@@ -592,16 +940,29 @@ def detect():
 
     except Exception as e:
 
-        print("DETECTION ERROR:")
+        print(
+            "DETECTION ERROR:"
+        )
+
         print(e)
 
+        # ---------------------------------------------
+        # RELEASE VIDEO CAPTURE
+        # ---------------------------------------------
+
         if cap is not None:
+
             try:
                 cap.release()
             except Exception:
                 pass
 
+        # ---------------------------------------------
+        # RELEASE WRITER
+        # ---------------------------------------------
+
         if writer is not None:
+
             try:
                 writer.release()
             except Exception:
@@ -612,7 +973,8 @@ def detect():
             "success": False,
 
             "message":
-                "Detection failed: " + str(e)
+                "Detection failed: "
+                + str(e)
 
         }), 500
 
@@ -630,16 +992,17 @@ def live_detect():
     global last_live_time
     global live_fps
 
-    start_time = time.perf_counter()
-
     if "frame" not in request.files:
 
         return jsonify({
             "success": False,
-            "message": "No camera frame received"
+            "message":
+                "No camera frame received"
         }), 400
 
-    frame_file = request.files["frame"]
+    frame_file = request.files[
+        "frame"
+    ]
 
     image_bytes = frame_file.read()
 
@@ -647,7 +1010,8 @@ def live_detect():
 
         return jsonify({
             "success": False,
-            "message": "Empty camera frame"
+            "message":
+                "Empty camera frame"
         }), 400
 
     np_array = np.frombuffer(
@@ -670,45 +1034,57 @@ def live_detect():
 
     try:
 
-        # -----------------------------------------------------
-        # REDUCE CAMERA FRAME SIZE
-        # -----------------------------------------------------
+        # -------------------------------------------------
+        # RESIZE CAMERA FRAME
+        # -------------------------------------------------
 
         max_width = 640
 
         if frame.shape[1] > max_width:
 
-            scale = max_width / frame.shape[1]
+            scale = (
+                max_width /
+                frame.shape[1]
+            )
 
             new_width = max_width
+
             new_height = int(
-                frame.shape[0] * scale
+                frame.shape[0] *
+                scale
             )
 
             frame = cv2.resize(
                 frame,
-                (new_width, new_height),
+                (
+                    new_width,
+                    new_height
+                ),
                 interpolation=cv2.INTER_AREA
             )
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # YOLO
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         yolo_model = get_model()
 
-        processed_frame, stats = detect_frame(
-            frame,
-            yolo_model
+        processed_frame, stats = (
+            detect_frame(
+                frame,
+                yolo_model
+            )
         )
 
         frame = processed_frame
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # FPS
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
-        current_time = time.perf_counter()
+        current_time = (
+            time.perf_counter()
+        )
 
         if last_live_time is not None:
 
@@ -719,11 +1095,15 @@ def live_detect():
 
             if delta > 0:
 
-                instant_fps = 1.0 / delta
+                instant_fps = (
+                    1.0 / delta
+                )
 
                 if live_fps <= 0:
 
-                    live_fps = instant_fps
+                    live_fps = (
+                        instant_fps
+                    )
 
                 else:
 
@@ -733,15 +1113,20 @@ def live_detect():
                         0.2 * instant_fps
                     )
 
-        last_live_time = current_time
-
-        display_fps = int(
-            max(0, live_fps)
+        last_live_time = (
+            current_time
         )
 
-        # -----------------------------------------------------
+        display_fps = int(
+            max(
+                0,
+                live_fps
+            )
+        )
+
+        # -------------------------------------------------
         # CAMERA DASHBOARD
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
         cv2.rectangle(
             frame,
@@ -811,19 +1196,21 @@ def live_detect():
             2
         )
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # JPEG
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
-        success, encoded_image = cv2.imencode(
-            ".jpg",
-            frame,
-            [
-                int(
-                    cv2.IMWRITE_JPEG_QUALITY
-                ),
-                70
-            ]
+        success, encoded_image = (
+            cv2.imencode(
+                ".jpg",
+                frame,
+                [
+                    int(
+                        cv2.IMWRITE_JPEG_QUALITY
+                    ),
+                    70
+                ]
+            )
         )
 
         if not success:
@@ -841,39 +1228,55 @@ def live_detect():
             mimetype="image/jpeg"
         )
 
-        # -----------------------------------------------------
+        # -------------------------------------------------
         # STATISTICS HEADERS
-        # -----------------------------------------------------
+        # -------------------------------------------------
 
-        response.headers["X-Persons"] = str(
+        response.headers[
+            "X-Persons"
+        ] = str(
             stats["persons"]
         )
 
-        response.headers["X-Phones"] = str(
+        response.headers[
+            "X-Phones"
+        ] = str(
             stats["phones"]
         )
 
-        response.headers["X-Cars"] = str(
+        response.headers[
+            "X-Cars"
+        ] = str(
             stats["cars"]
         )
 
-        response.headers["X-Buses"] = str(
+        response.headers[
+            "X-Buses"
+        ] = str(
             stats["buses"]
         )
 
-        response.headers["X-Trucks"] = str(
+        response.headers[
+            "X-Trucks"
+        ] = str(
             stats["trucks"]
         )
 
-        response.headers["X-Motorcycles"] = str(
+        response.headers[
+            "X-Motorcycles"
+        ] = str(
             stats["motorcycles"]
         )
 
-        response.headers["X-Total-Objects"] = str(
+        response.headers[
+            "X-Total-Objects"
+        ] = str(
             stats["total_objects"]
         )
 
-        response.headers["X-FPS"] = str(
+        response.headers[
+            "X-FPS"
+        ] = str(
             display_fps
         )
 
@@ -881,7 +1284,10 @@ def live_detect():
 
     except Exception as e:
 
-        print("LIVE CAMERA ERROR:")
+        print(
+            "LIVE CAMERA ERROR:"
+        )
+
         print(e)
 
         return jsonify({
